@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dula_auth/core/crypto/vault_crypto.dart';
 import 'package:dula_auth/core/crypto/vault_meta.dart';
+import 'package:dula_auth/core/security/credential_kind.dart';
 import 'package:dula_auth/core/vault/secret_store.dart';
 import 'package:dula_auth/core/vault/vault_service.dart';
 
@@ -56,6 +57,66 @@ void main() {
       final third = VaultService(secondStore, params: testParams);
       await third.initialize('correct horse battery');
       expect(await secondStore.read(VaultService.saltKey), isNot(firstSalt));
+    });
+  });
+
+  group('credential kind', () {
+    test('defaults to a PIN when the caller does not choose', () async {
+      await vault.initialize('481629');
+
+      expect(await vault.credentialKind(), CredentialKind.pin);
+    });
+
+    test('records the chosen kind', () async {
+      await vault.initialize(
+        'rope anchor lantern',
+        kind: CredentialKind.passphrase,
+      );
+
+      expect(await vault.credentialKind(), CredentialKind.passphrase);
+    });
+
+    test('is readable while the vault is still locked', () async {
+      // The lock screen has to decide between a keypad and a text field before
+      // anything has been decrypted, so this must not require the key.
+      await vault.initialize(
+        'rope anchor lantern',
+        kind: CredentialKind.passphrase,
+      );
+
+      final reopened = VaultService(store, params: testParams);
+
+      expect(await reopened.credentialKind(), CredentialKind.passphrase);
+    });
+
+    test('switching kind re-keys the vault and records the new kind', () async {
+      await vault.initialize('481629');
+
+      final changed = await vault.changeCredential(
+        currentPassword: '481629',
+        newPassword: 'rope anchor lantern',
+        newKind: CredentialKind.passphrase,
+      );
+
+      expect(changed, isTrue);
+      expect(await vault.credentialKind(), CredentialKind.passphrase);
+      expect((await vault.unlock('rope anchor lantern')).isUnlocked, isTrue);
+      expect((await vault.unlock('481629')).isUnlocked, isFalse);
+    });
+
+    test('keeps the old kind when the change is refused', () async {
+      await vault.initialize('481629');
+
+      final changed = await vault.changeCredential(
+        currentPassword: 'wrong pin',
+        newPassword: 'rope anchor lantern',
+        newKind: CredentialKind.passphrase,
+      );
+
+      expect(changed, isFalse);
+      expect(await vault.credentialKind(), CredentialKind.pin,
+          reason: 'a refused change must not leave the lock screen '
+              'presenting the wrong input');
     });
   });
 

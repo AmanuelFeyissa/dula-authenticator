@@ -1,7 +1,60 @@
 # ADR-0011: Authentication & Unlock Model (Biometric-First, PIN or Passphrase)
 
 ## Status
-Proposed
+**Accepted — implemented.**
+
+Delivered in `lib/core/security/` (`credential_kind.dart`, `credential_policy.dart`,
+`passphrase_policy.dart`, `biometric_authenticator.dart`), `lib/core/settings/`
+(`app_settings.dart`, `settings_repository.dart`), a rewritten
+`lib/features/auth/{providers,repositories,screens,widgets}/`, and a new
+`lib/features/settings/`. 183 unit tests and 21 end-to-end tests pass.
+
+What shipped against the decision below:
+
+1. **Credential choice at registration** — done. The kind is persisted in the vault metadata
+   (`vault_meta`, field `cred`) rather than in preferences, so the lock screen can present the
+   right input before anything is decrypted, and clearing preferences cannot strand a user in
+   front of a keypad they cannot type their passphrase into. An unreadable value resolves to
+   *passphrase* for the same reason.
+2. **Biometric-first, optional, disableable** — done, with a change the original decision did not
+   state: the derived key is cached **only while biometrics are enabled**. Previously
+   `setupPin()` cached it unconditionally, leaving the vault key at rest for a feature the user
+   had not asked for. Disabling biometrics now deletes the cache.
+3. **Fallback always available** — unchanged, and covered end-to-end: a refused fingerprint falls
+   back to the credential rather than letting anyone in.
+4. **Change credential without resetting the vault** — done, including switching kind, via
+   `ChangeCredentialScreen`. The cached biometric key is refreshed as part of the re-key, without
+   which biometric unlock would have broken silently after any credential change.
+5. **Configurable auto-lock** — done (immediate / 30s / 1min / 5min / never). "Never" arms no
+   timer at all rather than a very long one, and an unreadable stored value falls back to the
+   30-second default rather than to "never", so a corrupt preference cannot switch locking off.
+6. **Rotation off by default** — done, and this fixed a live bug: the 90-day expiry was documented
+   as opt-in but applied unconditionally, so any credential older than 90 days forced a rotation
+   prompt. A regression test covers it.
+
+Deviations and additions, all deliberate:
+
+- **Passphrase minimum is 12 characters**, above NIST SP 800-63B's floor of 8, because this vault
+  is attackable offline by anyone holding the device. NIST's recommended 15 is surfaced as
+  guidance through a strength meter rather than enforced. Composition rules are deliberately
+  absent, per the same standard.
+- **Unicode normalization (NFKC) is not applied.** Dart has no built-in normalization and adding a
+  dependency for it was out of scope; the practical risk is a user entering the same passphrase
+  through a different input method. Worth revisiting if it is ever reported.
+- **Passphrases are not trimmed.** A trimmed value would differ from what the user typed; the
+  confirmation step catches accidental whitespace instead.
+- **Failed-attempt and lockout state moved from shared preferences into the secure store.** A
+  lockout an attacker can clear by deleting a plain file is not a lockout. Not called for by this
+  ADR, but in scope for it.
+- **A cold-launch bug was found and fixed by the end-to-end suite**: the lock screen decided
+  whether to prompt for biometrics from a post-frame callback, before the asynchronous auth and
+  settings state had loaded. It therefore read the defaults (biometrics off) and never prompted
+  again, leaving biometric auto-unlock silently dead on launch.
+- **Per-type OTP settings toggles from ADR-0012** remain unbuilt; the settings screen now exists,
+  so that deferral can be revisited on its own merits rather than for want of a surface.
+
+`docs/SECURITY_MODEL.md` was created as part of this work and carries the honest statement about
+biometric strength that the Risks section below demands.
 
 ## Context
 The current model makes a **6-digit PIN the primary and mandatory secret**. Biometrics exist but

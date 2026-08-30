@@ -1,14 +1,28 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dula_auth/features/auth/providers/auth_provider.dart';
-import 'package:dula_auth/core/widgets/responsive_layout.dart';
-import 'package:dula_auth/core/security/pin_policy.dart';
+
 import 'package:dula_auth/core/branding/branded_logo.dart';
 import 'package:dula_auth/core/branding/branding_config.dart';
-import 'dart:ui';
-import 'dart:async';
-import 'package:flutter/services.dart';
+import 'package:dula_auth/core/security/credential_kind.dart';
+import 'package:dula_auth/core/security/pin_policy.dart';
+import 'package:dula_auth/core/widgets/responsive_layout.dart';
+import 'package:dula_auth/features/auth/providers/auth_provider.dart';
+import 'package:dula_auth/features/auth/widgets/passphrase_field.dart';
+import 'package:dula_auth/features/auth/widgets/pin_pad.dart';
+import 'package:dula_auth/features/settings/providers/settings_provider.dart';
 
+/// Unlock gate for an existing vault.
+///
+/// Caller: `lib/core/widgets/app_lifecycle_wrapper.dart`, and driven by
+/// `integration_test/app_flow_test.dart`. No data schema — it reads auth state
+/// and settings and persists nothing itself.
+///
+/// Setup and rotation entry moved to `credential_setup_screen.dart` during the
+/// user instruction "go ahead on phase 3"; this screen now does one job, and
+/// presents whichever input the vault's recorded credential kind calls for
+/// (ADR-0011).
 class AppLockScreen extends ConsumerStatefulWidget {
   const AppLockScreen({super.key});
 
@@ -16,22 +30,16 @@ class AppLockScreen extends ConsumerStatefulWidget {
   ConsumerState<AppLockScreen> createState() => _AppLockScreenState();
 }
 
-class _AppLockScreenState extends ConsumerState<AppLockScreen> with WidgetsBindingObserver {
-  String _currentPin = '';
+class _AppLockScreenState extends ConsumerState<AppLockScreen>
+    with WidgetsBindingObserver {
+  String _pin = '';
   String _errorText = '';
-  
-  // For setup mode
-  String? _firstPin;
-  bool _isConfirming = false;
-  
-  // Biometric state
-  bool _biometricsAvailable = false;
-  bool _isBiometricLoading = false;
+  bool _busy = false;
+  bool _biometricPromptInFlight = false;
 
-  final FocusNode _focusNode = FocusNode();
+  final TextEditingController _passphrase = TextEditingController();
+  final FocusNode _keyboardFocus = FocusNode();
   Timer? _lockoutTimer;
-  
-  static const int _pinLength = 6;
 
   @override
   void initState() {
@@ -39,345 +47,308 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> with WidgetsBindi
     WidgetsBinding.instance.addObserver(this);
     _startLockoutTimer();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
-      _checkAndTriggerBiometrics();
+      _keyboardFocus.requestFocus();
+      _maybePromptForBiometrics();
     });
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      // Re-trigger biometrics if the app was locked in the background and is now returning to foreground
-      _checkAndTriggerBiometrics();
-    }
+    // Retry on resume: a prompt raised while backgrounded goes nowhere.
+    if (state == AppLifecycleState.resumed) _maybePromptForBiometrics();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _lockoutTimer?.cancel();
-    _focusNode.dispose();
+    _passphrase.dispose();
+    _keyboardFocus.dispose();
     super.dispose();
   }
 
-  /// Check if biometrics is available and, if so, auto-trigger the prompt.
-  /// This runs every time the lock screen is shown (including after inactivity lock).
-  Future<void> _checkAndTriggerBiometrics() async {
+  /// Fires the biometric prompt when the user has asked for it.
+  ///
+  /// This screen is the single owner of that trigger: the auth notifier
+  /// deliberately does not raise it on startup, so two prompts can never race.
+  Future<void> _maybePromptForBiometrics() async {
+    if (!mounted || _biometricPromptInFlight) return;
+
+    // Both the auth state and the settings load asynchronously, and this runs
+    // from a post-frame callback — so without waiting, the check reads the
+    // defaults (biometrics off), returns, and never fires again. That made
+    // biometric unlock silently dead on a cold launch.
+    await ref.read(authStateProvider.notifier).ready;
+    await ref.read(settingsProvider.notifier).ready;
     if (!mounted) return;
-    final authState = ref.read(authStateProvider);
-    // Only auto-trigger for normal unlock, not during PIN setup/rotation
-    if (authState.isPinSetupRequired || authState.isPinExpired) return;
 
-    final repository = ref.read(authRepositoryProvider);
-    final isEnabled = await repository.isBiometricsEnabled();
-    final canUse = await repository.canUseBiometrics();
-    final available = isEnabled && canUse;
+    final auth = ref.read(authStateProvider);
+    final settings = ref.read(settingsProvider);
+    if (!auth.isLocked) return;
+    if (!settings.biometricUnlockEnabled || !auth.biometricsAvailable) return;
+    if (auth.isCredentialExpired || auth.isLockedOut) return;
 
-    if (!mounted) return;
-    setState(() => _biometricsAvailable = available);
+    // Don't raise a prompt into a backgrounded app — it goes nowhere and the
+    // resume handler will retry. A *null* state means the platform has not
+    // reported one yet, which is normal at cold start and must not be read as
+    // "backgrounded", or the launch prompt never fires at all.
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (lifecycle != null && lifecycle != AppLifecycleState.resumed) return;
 
-    if (available) {
-      // Small delay so the lock screen animation completes first
-      await Future.delayed(const Duration(milliseconds: 400));
-      // Only fire the biometric prompt if the app is actually in the foreground.
-      // If it's in the background, we'll catch it in didChangeAppLifecycleState when it resumes.
-      if (mounted && WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
-        _triggerBiometricUnlock();
-      }
-    }
-  }
-
-  Future<void> _triggerBiometricUnlock() async {
-    if (_isBiometricLoading || !mounted) return;
-    setState(() => _isBiometricLoading = true);
+    setState(() => _biometricPromptInFlight = true);
     await ref.read(authStateProvider.notifier).unlockWithBiometrics();
-    if (mounted) setState(() => _isBiometricLoading = false);
+    if (mounted) setState(() => _biometricPromptInFlight = false);
   }
 
   void _startLockoutTimer() {
     _lockoutTimer?.cancel();
     _lockoutTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       final authState = ref.read(authStateProvider);
       if (authState.isLockedOut) {
-        setState(() {}); // Refresh for countdown
-      } else if (authState.lockoutUntil != null) {
-        setState(() {}); // Final refresh when lockout ends
-        timer.cancel();
+        setState(() {}); // Refresh the countdown.
       } else {
+        if (authState.lockoutUntil != null) setState(() {});
         timer.cancel();
       }
     });
   }
 
-  void _onDigitPressed(String digit) {
-    if (_currentPin.length < _pinLength) {
-      setState(() {
-        _currentPin += digit;
-        _errorText = '';
-      });
-      
-      if (_currentPin.length == _pinLength) {
-        _processPin();
-      }
-    }
+  void _onDigit(String digit) {
+    if (_busy || ref.read(authStateProvider).isLockedOut) return;
+    if (_pin.length >= PinPolicy.pinLength) return;
+
+    setState(() {
+      _pin += digit;
+      _errorText = '';
+    });
+
+    if (_pin.length == PinPolicy.pinLength) _attemptUnlock(_pin);
   }
 
-  void _onBackspacePressed() {
-    if (_currentPin.isNotEmpty) {
-      setState(() {
-        _currentPin = _currentPin.substring(0, _currentPin.length - 1);
-        _errorText = '';
-      });
-    }
+  void _onBackspace() {
+    if (_pin.isEmpty) return;
+    setState(() {
+      _pin = _pin.substring(0, _pin.length - 1);
+      _errorText = '';
+    });
   }
-  
-  Future<void> _processPin() async {
-    final authState = ref.read(authStateProvider);
+
+  Future<void> _attemptUnlock(String credential) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+
     final notifier = ref.read(authStateProvider.notifier);
+    final succeeded = await notifier.unlockWithCredential(credential);
 
-    // Give a slight delay for visual feedback before processing
-    await Future.delayed(const Duration(milliseconds: 150));
+    if (!mounted) return;
 
-    if (authState.isPinSetupRequired || (authState.isPinExpired && authState.isPinVerifiedForRotation)) {
-      if (!_isConfirming) {
-        final pinError = PinPolicy.validate(_currentPin);
-        if (pinError != null) {
-          setState(() {
-            _errorText = pinError;
-            _currentPin = '';
-          });
-          return;
-        }
-        setState(() {
-          _firstPin = _currentPin;
-          _currentPin = '';
-          _isConfirming = true;
-        });
-      } else {
-        if (_firstPin == _currentPin) {
-          // Success, save NEW PIN (rotation or setup)
-          final success = await notifier.setupPin(_currentPin);
-          if (success) {
-            setState(() {
-              _currentPin = '';
-              _errorText = '';
-              _firstPin = null;
-              _isConfirming = false;
-            });
-          } else {
-            // Reuse error (New PIN same as Old PIN)
-            setState(() {
-              _errorText = 'New PIN cannot be the same as your old one.';
-              _currentPin = '';
-              _firstPin = null;
-              _isConfirming = false;
-            });
-          }
-        } else {
-          // Mismatch
-          setState(() {
-            _errorText = 'PINs do not match. Try again.';
-            _currentPin = '';
-            _firstPin = null;
-            _isConfirming = false;
-          });
-        }
-      }
-    } else {
-      // Normal unlock or Rotation step 1 (Verify Old PIN)
-      final success = await notifier.unlockWithPin(_currentPin);
-      if (success && authState.isPinExpired) {
-        // Old PIN verified, now prompt for NEW PIN
-        setState(() {
-          _currentPin = '';
-          _errorText = '';
-        });
-      } else if (!success) {
-        final newState = ref.read(authStateProvider);
-        if (newState.isLockedOut) {
-          _startLockoutTimer();
-        }
-        setState(() {
-          _errorText = newState.isLockedOut ? '' : 'Incorrect PIN';
-          _currentPin = '';
-        });
-      }
+    if (succeeded) {
+      // Either the app is now unlocked, or an expired credential has been
+      // verified and the setup screen takes over. Either way this screen is
+      // being replaced, so it only needs to stop showing a stale entry.
+      setState(() {
+        _busy = false;
+        _pin = '';
+        _errorText = '';
+        _passphrase.clear();
+      });
+      return;
     }
-  }
 
-  void _handleKeyEvent(KeyEvent event) {
-    if (event is KeyDownEvent) {
-      final authState = ref.read(authStateProvider);
-      if (authState.isLockedOut) return;
+    final state = ref.read(authStateProvider);
+    if (state.isLockedOut) _startLockoutTimer();
 
-      final logicalKey = event.logicalKey;
-      
-      // Handle standard digits (0-9)
-      if (logicalKey.keyLabel.length == 1 && RegExp(r'[0-9]').hasMatch(logicalKey.keyLabel)) {
-        _onDigitPressed(logicalKey.keyLabel);
-      } 
-      // Handle Numpad digits (specifically for cases where label might differ or for robustness)
-      else if (logicalKey == LogicalKeyboardKey.numpad0) { _onDigitPressed('0'); }
-      else if (logicalKey == LogicalKeyboardKey.numpad1) { _onDigitPressed('1'); }
-      else if (logicalKey == LogicalKeyboardKey.numpad2) { _onDigitPressed('2'); }
-      else if (logicalKey == LogicalKeyboardKey.numpad3) { _onDigitPressed('3'); }
-      else if (logicalKey == LogicalKeyboardKey.numpad4) { _onDigitPressed('4'); }
-      else if (logicalKey == LogicalKeyboardKey.numpad5) { _onDigitPressed('5'); }
-      else if (logicalKey == LogicalKeyboardKey.numpad6) { _onDigitPressed('6'); }
-      else if (logicalKey == LogicalKeyboardKey.numpad7) { _onDigitPressed('7'); }
-      else if (logicalKey == LogicalKeyboardKey.numpad8) { _onDigitPressed('8'); }
-      else if (logicalKey == LogicalKeyboardKey.numpad9) { _onDigitPressed('9'); }
-      // Handle Backspace
-      else if (logicalKey == LogicalKeyboardKey.backspace) {
-        _onBackspacePressed();
-      }
-    }
+    setState(() {
+      _busy = false;
+      _pin = '';
+      _passphrase.clear();
+      _errorText = state.isLockedOut
+          ? ''
+          : (state.credentialKind == CredentialKind.pin
+              ? 'Incorrect PIN'
+              : 'Incorrect passphrase');
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
+    final settings = ref.watch(settingsProvider);
     final theme = Theme.of(context);
     final branding = ref.watch(brandingConfigProvider);
 
-    String titleString = 'Enter PIN';
-    if (authState.isPinSetupRequired) {
-      titleString = _isConfirming ? 'Confirm PIN' : 'Create 6-Digit PIN';
-    } else if (authState.isPinExpired) {
-      if (!authState.isPinVerifiedForRotation) {
-        titleString = 'PIN Expired - Enter Old PIN';
-      } else {
-        titleString = _isConfirming ? 'Confirm New PIN' : 'Create New PIN';
-      }
+    final isPin = authState.credentialKind == CredentialKind.pin;
+    final showBiometricButton =
+        settings.biometricUnlockEnabled && authState.biometricsAvailable;
+
+    String title;
+    if (authState.isCredentialExpired) {
+      title = isPin
+          ? 'PIN expired — enter your current PIN'
+          : 'Passphrase expired — enter your current one';
+    } else {
+      title = isPin ? 'Enter PIN' : 'Enter Passphrase';
     }
 
     return Scaffold(
-      body: KeyboardListener(
-        focusNode: _focusNode,
-        autofocus: true,
-        onKeyEvent: _handleKeyEvent,
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF4C1D95), Color(0xFF5B21B6), Color(0xFF1E1B4B)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF4C1D95), Color(0xFF5B21B6), Color(0xFF1E1B4B)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
-          child: SafeArea(
-            child: ResponsiveLayout(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final screenHeight = constraints.maxHeight;
-                  final isSmallScreen = screenHeight < 650;
-                  
-                  return Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Spacer(flex: 1),
-                      // App branding header
-                      BrandedLogo(size: isSmallScreen ? 60 : 100),
-                      const SizedBox(height: 12),
-                      Text(
-                        branding.appName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 2.0,
-                        ),
-                      ),
-                      const Spacer(flex: 1),
-                      Text(
-                        titleString,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: Colors.white70,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      if (!authState.isPinSetupRequired &&
-                          authState.isLockedOut) ...[
-                        const SizedBox(height: 4),
-                        _buildLockoutMessage(authState.lockoutUntil!),
-                      ],
-                      const Spacer(flex: 1),
-                      // PIN Dots
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(_pinLength, (index) {
-                          final isFilled = index < _currentPin.length;
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            margin: const EdgeInsets.symmetric(horizontal: 8),
-                            width: 14,
-                            height: 14,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isFilled ? Colors.white : Colors.white24,
-                              border: Border.all(
-                                color: isFilled ? Colors.white : Colors.white54,
-                                width: 1,
-                              ),
-                            ),
-                          );
-                        }),
-                      ),
-                      if (_errorText.isNotEmpty) ...[
+        ),
+        child: SafeArea(
+          child: ResponsiveLayout(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxHeight < 650;
+
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: ConstrainedBox(
+                    constraints:
+                        BoxConstraints(minHeight: constraints.maxHeight),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 24),
+                        BrandedLogo(size: compact ? 56 : 88),
                         const SizedBox(height: 12),
                         Text(
-                          _errorText,
-                          style: const TextStyle(color: Colors.redAccent, fontSize: 14, fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                      const Spacer(flex: 1),
-                      // Numpad - constrained to fit
-                      ConstrainedBox(
-                        constraints: BoxConstraints(maxHeight: isSmallScreen ? 340 : 400),
-                        child: _buildNumPad(isSmallScreen, authState.isLockedOut),
-                      ),
-                      
-                      if (!authState.isPinSetupRequired && _biometricsAvailable) ...[
-                        const Spacer(flex: 1),
-                        GestureDetector(
-                          onTap: _isBiometricLoading ? null : _triggerBiometricUnlock,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _isBiometricLoading
-                                  ? const SizedBox(
-                                      width: 40,
-                                      height: 40,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white70,
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : const Icon(
-                                      Icons.fingerprint,
-                                      size: 48,
-                                      color: Colors.tealAccent,
-                                    ),
-                              const SizedBox(height: 6),
-                              Text(
-                                _isBiometricLoading ? 'Scanning...' : 'Use Biometrics',
-                                style: const TextStyle(
-                                  color: Colors.white60,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
+                          branding.appName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 2.0,
                           ),
                         ),
+                        const SizedBox(height: 32),
+                        Text(
+                          title,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        if (authState.isLockedOut) ...[
+                          const SizedBox(height: 12),
+                          _buildLockoutMessage(authState.lockoutUntil!),
+                        ],
+                        const SizedBox(height: 24),
+                        if (isPin)
+                          _buildPinEntry(compact, authState.isLockedOut)
+                        else
+                          _buildPassphraseEntry(authState.isLockedOut),
+                        if (showBiometricButton) ...[
+                          const SizedBox(height: 28),
+                          _buildBiometricButton(),
+                        ],
+                        const SizedBox(height: 24),
                       ],
-                      const Spacer(flex: 1),
-                    ],
-                  );
-                },
-              ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildPinEntry(bool compact, bool lockedOut) {
+    final pad = PinPad(
+      onDigit: _onDigit,
+      onBackspace: _onBackspace,
+      disabled: lockedOut || _busy,
+      compact: compact,
+    );
+
+    return KeyboardListener(
+      focusNode: _keyboardFocus,
+      autofocus: true,
+      onKeyEvent: pad.handleKeyEvent,
+      child: Column(
+        children: [
+          PinDots(length: PinPolicy.pinLength, filled: _pin.length),
+          if (_errorText.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              _errorText,
+              style: const TextStyle(
+                color: Colors.redAccent,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+          const SizedBox(height: 24),
+          pad,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPassphraseEntry(bool lockedOut) {
+    return Column(
+      children: [
+        PassphraseField(
+          controller: _passphrase,
+          label: 'Passphrase',
+          autofocus: true,
+          enabled: !lockedOut && !_busy,
+          errorText: _errorText.isEmpty ? null : _errorText,
+          onSubmitted: () => _attemptUnlock(_passphrase.text),
+        ),
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: lockedOut || _busy
+                ? null
+                : () => _attemptUnlock(_passphrase.text),
+            child: const Text('Unlock'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBiometricButton() {
+    return GestureDetector(
+      onTap: _biometricPromptInFlight ? null : _maybePromptForBiometrics,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _biometricPromptInFlight
+              ? const SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: CircularProgressIndicator(
+                    color: Colors.white70,
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Icon(
+                  Icons.fingerprint,
+                  size: 48,
+                  color: Colors.tealAccent,
+                ),
+          const SizedBox(height: 6),
+          Text(
+            _biometricPromptInFlight ? 'Scanning...' : 'Use Biometrics',
+            style: const TextStyle(color: Colors.white60, fontSize: 13),
+          ),
+        ],
       ),
     );
   }
@@ -386,13 +357,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> with WidgetsBindi
     final remaining = until.difference(DateTime.now());
     final seconds = remaining.inSeconds % 60;
     final minutes = remaining.inMinutes;
-
-    String timeStr = '';
-    if (minutes > 0) {
-      timeStr = '$minutes min ${seconds}s';
-    } else {
-      timeStr = '${seconds}s';
-    }
+    final timeStr = minutes > 0 ? '$minutes min ${seconds}s' : '${seconds}s';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -404,102 +369,20 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> with WidgetsBindi
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.lock_clock_outlined, color: Colors.redAccent, size: 16),
+          const Icon(Icons.lock_clock_outlined,
+              color: Colors.redAccent, size: 16),
           const SizedBox(width: 8),
-          Text(
-            'Security Lockout: Try again in $timeStr',
-            style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 13),
+          Flexible(
+            child: Text(
+              'Too many attempts. Try again in $timeStr',
+              style: const TextStyle(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildNumPad(bool isSmallScreen, bool isDisabled) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildNumButton('1', isSmallScreen, isDisabled),
-            _buildNumButton('2', isSmallScreen, isDisabled),
-            _buildNumButton('3', isSmallScreen, isDisabled),
-          ],
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildNumButton('4', isSmallScreen, isDisabled),
-            _buildNumButton('5', isSmallScreen, isDisabled),
-            _buildNumButton('6', isSmallScreen, isDisabled),
-          ],
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildNumButton('7', isSmallScreen, isDisabled),
-            _buildNumButton('8', isSmallScreen, isDisabled),
-            _buildNumButton('9', isSmallScreen, isDisabled),
-          ],
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(width: isSmallScreen ? 60 : 80, height: isSmallScreen ? 60 : 80),
-            _buildNumButton('0', isSmallScreen, isDisabled),
-            Container(
-              width: isSmallScreen ? 60 : 80,
-              height: isSmallScreen ? 60 : 80,
-              alignment: Alignment.center,
-              child: IconButton(
-                iconSize: isSmallScreen ? 24 : 28,
-                color: Colors.white,
-                icon: const Icon(Icons.backspace_outlined),
-                onPressed: isDisabled ? null : _onBackspacePressed,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNumButton(String digit, bool isSmallScreen, bool isDisabled) {
-    final size = isSmallScreen ? 56.0 : 72.0;
-    final margin = isSmallScreen ? 8.0 : 12.0;
-    
-    return Opacity(
-      opacity: isDisabled ? 0.4 : 1.0,
-      child: Container(
-        margin: EdgeInsets.all(margin),
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: 0.1),
-        ),
-        child: ClipOval(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: isDisabled ? null : () => _onDigitPressed(digit),
-                child: Center(
-                  child: Text(
-                    digit,
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 24 : 28,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

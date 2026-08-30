@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dula_auth/core/crypto/vault_crypto.dart';
+import 'package:dula_auth/core/security/credential_kind.dart';
 
 /// Format record for the on-device vault.
 ///
@@ -19,7 +20,19 @@ class VaultMeta {
   final int version;
   final KdfParams kdfParams;
 
-  const VaultMeta({required this.version, required this.kdfParams});
+  /// Which knowledge factor opens this vault.
+  ///
+  /// Recorded here rather than in app preferences because the lock screen
+  /// needs it before anything is decrypted, and because preferences can be
+  /// cleared independently of the vault — which would leave the app offering
+  /// the wrong input for a vault that still exists (ADR-0011).
+  final CredentialKind credentialKind;
+
+  const VaultMeta({
+    required this.version,
+    required this.kdfParams,
+    this.credentialKind = CredentialKind.pin,
+  });
 
   /// A vault this build knows how to open.
   ///
@@ -27,7 +40,11 @@ class VaultMeta {
   /// it is safer than guessing at a format we do not understand.
   bool get isSupported => version == currentVersion;
 
-  String toJson() => jsonEncode({'v': version, 'kdf': kdfParams.toMap()});
+  String toJson() => jsonEncode({
+        'v': version,
+        'kdf': kdfParams.toMap(),
+        'cred': credentialKind.name,
+      });
 
   /// Parses a stored metadata record. Missing or unreadable metadata yields
   /// the current version with default parameters, which the verifier check
@@ -37,6 +54,7 @@ class VaultMeta {
       return const VaultMeta(
         version: currentVersion,
         kdfParams: KdfParams.owaspDefault,
+        credentialKind: CredentialKind.passphrase,
       );
     }
     try {
@@ -47,11 +65,13 @@ class VaultMeta {
         kdfParams: kdf is Map<String, dynamic>
             ? KdfParams.fromMap(kdf)
             : KdfParams.owaspDefault,
+        credentialKind: CredentialKind.fromName(map['cred'] as String?),
       );
     } catch (_) {
       return const VaultMeta(
         version: currentVersion,
         kdfParams: KdfParams.owaspDefault,
+        credentialKind: CredentialKind.passphrase,
       );
     }
   }

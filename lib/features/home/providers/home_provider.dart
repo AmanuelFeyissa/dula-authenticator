@@ -21,7 +21,7 @@ class AccountListNotifier extends StateNotifier<AsyncValue<List<OtpAccount>>> {
       final authState = _ref.read(authStateProvider);
       
       // If we are locked or setup is required, or NO master key, don't show accounts
-      if (authState.isLocked || authState.isPinSetupRequired || authState.masterKey == null) {
+      if (authState.isLocked || authState.isSetupRequired || authState.masterKey == null) {
         state = const AsyncValue.data([]);
         return;
       }

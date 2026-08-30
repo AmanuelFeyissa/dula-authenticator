@@ -8,6 +8,8 @@ import 'package:root_checker_plus/root_checker_plus.dart';
 import 'package:dula_auth/core/branding/branding_config.dart';
 import 'package:dula_auth/features/auth/providers/auth_provider.dart';
 import 'package:dula_auth/features/auth/screens/app_lock_screen.dart';
+import 'package:dula_auth/features/auth/screens/credential_setup_screen.dart';
+import 'package:dula_auth/features/settings/providers/settings_provider.dart';
 
 class AppLifecycleWrapper extends ConsumerStatefulWidget {
   final Widget child;
@@ -79,12 +81,24 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
       });
     }
 
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive || state == AppLifecycleState.hidden) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
       _lockTimer?.cancel();
-      // Auto-lock for session security after 30 seconds
-      _lockTimer = Timer(const Duration(seconds: 30), () {
+
+      // How patient the lock is, is the user's call (ADR-0011): 30 seconds
+      // suits a shared workstation and is merely irritating on a personal
+      // desktop. "Never" means no timer at all rather than a very long one.
+      final delay = ref.read(settingsProvider).autoLock.duration;
+      if (delay == null) return;
+
+      if (delay == Duration.zero) {
         ref.read(authStateProvider.notifier).lock();
-      });
+      } else {
+        _lockTimer = Timer(delay, () {
+          ref.read(authStateProvider.notifier).lock();
+        });
+      }
     } else if (state == AppLifecycleState.resumed) {
       _lockTimer?.cancel();
     }
@@ -99,17 +113,22 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
     final authState = ref.watch(authStateProvider);
     final branding = ref.watch(brandingConfigProvider);
 
-    // Switch between the wrapped content and the lock screen
+    // Three gates, in order of precedence: create a credential, replace an
+    // expired one, or unlock. Rotation only reaches the setup screen once the
+    // current credential has been verified on the lock screen.
+    final needsSetup = authState.isSetupRequired ||
+        (authState.isCredentialExpired && authState.isVerifiedForRotation);
+
     Widget content = AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
-      child: (authState.isLocked || authState.isPinSetupRequired)
-          ? const AppLockScreen()
-          : widget.child,
+      child: needsSetup
+          ? const CredentialSetupScreen()
+          : (authState.isLocked ? const AppLockScreen() : widget.child),
     );
 
     // Immediate privacy overlay when app is inactive (task switcher, etc.)
     // Only show if NOT already on the lock screen (which is already secure)
-    if (_isInactive && !authState.isLocked && !authState.isPinSetupRequired) {
+    if (_isInactive && !authState.isLocked && !authState.isSetupRequired) {
       return Stack(
         children: [
           content,

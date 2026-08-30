@@ -29,10 +29,15 @@ below) before proceeding — do not silently narrow scope back to a single-compa
 - **Feature-folder layout**: `lib/features/<feature>/{screens,providers,repositories,widgets}/`.
   Shared, non-feature-specific code lives in `lib/core/{models,repositories,services,widgets}/`.
 - **Security-sensitive core** (extra scrutiny required — see the `security-review-mfa` skill):
-  - `lib/core/totp_engine.dart` — RFC 6238/4226 code generation.
-  - `lib/core/services/security_service.dart` — PIN hashing, AES-256-CBC key derivation/encryption.
-  - `lib/core/repositories/account_repository.dart`, `lib/features/auth/**` — secret storage, PIN
-    policy/lockout, biometrics.
+  - `lib/core/otp/` — RFC 6238/4226 code generation and `otpauth://` parsing.
+  - `lib/core/crypto/` — Argon2id derivation, AES-256-GCM sealing, vault format record.
+  - `lib/core/vault/` — vault lifecycle, re-keying, secret storage abstraction.
+  - `lib/core/security/` — PIN and passphrase policy, credential kind, biometric gate.
+  - `lib/core/repositories/account_repository.dart`, `lib/features/auth/**` — secret storage,
+    credential policy/lockout, biometrics.
+- **The security model is documented in `docs/SECURITY_MODEL.md`** — threat model, the honest
+  limits of biometric unlock, and the per-platform capability table. Keep it in sync with any
+  change that alters a guarantee (required by ADR-0005 and ADR-0011).
 - **No backend, no network.** Everything runs locally on-device. Since directory authentication
   was removed (ADR-0014), the app makes **no outbound network calls at all**. This is a deliberate,
   enforced constraint (ADR-0007), not an accident — see "Zero telemetry" below.

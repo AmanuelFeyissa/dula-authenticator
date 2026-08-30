@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:dula_auth/core/branding/branded_logo.dart';
 import 'package:dula_auth/core/branding/branding_config.dart';
 import 'package:dula_auth/features/accounts/screens/add_account_screen.dart';
+import 'package:dula_auth/features/settings/screens/settings_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -41,9 +42,23 @@ class HomeScreen extends ConsumerWidget {
             onSelected: (value) {
               if (value == 'about') {
                 _showAboutDialog(context, branding);
+              } else if (value == 'settings') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.tune, color: Colors.black54),
+                    SizedBox(width: 12),
+                    Text('Settings'),
+                  ],
+                ),
+              ),
               const PopupMenuItem(
                 value: 'about',
                 child: Row(
