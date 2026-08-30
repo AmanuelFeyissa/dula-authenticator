@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:dula_auth/core/crypto/vault_crypto.dart';
-import 'package:dula_auth/core/models/totp_account.dart';
+import 'package:dula_auth/core/models/otp_account.dart';
 import 'package:dula_auth/core/vault/secret_store.dart';
 import 'package:dula_auth/core/vault/vault_service.dart';
 
@@ -35,18 +35,18 @@ class AccountRepository {
   /// Loads all accounts, decrypting secrets when [masterKey] is supplied.
   ///
   /// Throws [VaultDecryptionException] if a secret cannot be decrypted.
-  Future<List<TotpAccount>> getAccounts({MasterKey? masterKey}) async {
+  Future<List<OtpAccount>> getAccounts({MasterKey? masterKey}) async {
     final raw = await _store.read(_accountsKey);
     if (raw == null || raw.isEmpty) return [];
 
     final decoded = jsonDecode(raw) as List<dynamic>;
     final accounts = decoded
-        .map((item) => TotpAccount.fromMap(item as Map<String, dynamic>))
+        .map((item) => OtpAccount.fromMap(item as Map<String, dynamic>))
         .toList();
 
     if (masterKey == null) return accounts;
 
-    final result = <TotpAccount>[];
+    final result = <OtpAccount>[];
     for (final account in accounts) {
       if (account.secret.isEmpty) {
         result.add(account);
@@ -62,10 +62,10 @@ class AccountRepository {
   }
 
   Future<void> _saveAccounts(
-    List<TotpAccount> accounts, {
+    List<OtpAccount> accounts, {
     MasterKey? masterKey,
   }) async {
-    final toSave = <TotpAccount>[];
+    final toSave = <OtpAccount>[];
     for (final account in accounts) {
       if (masterKey == null || account.secret.isEmpty) {
         toSave.add(account);
@@ -85,7 +85,7 @@ class AccountRepository {
   }
 
   /// Adds an account. Returns false if the id is already present.
-  Future<bool> addAccount(TotpAccount account, {MasterKey? masterKey}) async {
+  Future<bool> addAccount(OtpAccount account, {MasterKey? masterKey}) async {
     final accounts = await getAccounts(masterKey: masterKey);
     if (accounts.any((a) => a.id == account.id)) return false;
 
@@ -96,7 +96,7 @@ class AccountRepository {
 
   /// Updates an existing account. Returns false if it was not found.
   Future<bool> updateAccount(
-    TotpAccount updatedAccount, {
+    OtpAccount updatedAccount, {
     MasterKey? masterKey,
   }) async {
     final accounts = await getAccounts(masterKey: masterKey);

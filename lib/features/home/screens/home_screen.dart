@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dula_auth/core/models/totp_account.dart';
-import 'package:dula_auth/core/totp_engine.dart';
+import 'package:dula_auth/core/models/otp_account.dart';
+import 'package:dula_auth/core/otp/otp_type.dart';
 import 'package:dula_auth/core/widgets/responsive_layout.dart';
 import 'package:dula_auth/features/home/providers/home_provider.dart';
 import 'package:flutter/services.dart';
@@ -176,7 +176,7 @@ class HomeScreen extends ConsumerWidget {
 }
 
 class _AccountCard extends ConsumerWidget {
-  final TotpAccount account;
+  final OtpAccount account;
 
   const _AccountCard({required this.account});
 
@@ -185,18 +185,23 @@ class _AccountCard extends ConsumerWidget {
     final timeAsync = ref.watch(currentTimerProvider);
     final now = timeAsync.value ?? DateTime.now();
 
-    final String code = TotpEngine.generateCode(
-      secret: account.secret,
-      time: now,
-      digits: account.digits,
-      period: account.period,
-      algorithm: account.algorithm,
-    );
+    // A secret that cannot produce a code is shown as an error rather than
+    // rendered as plausible-but-wrong digits.
+    String code;
+    String? codeError;
+    try {
+      code = account.generateCode(time: now);
+    } on FormatException {
+      code = '';
+      codeError = 'Invalid secret';
+    }
 
-    final int remainingSeconds = TotpEngine.getRemainingSeconds(time: now, period: account.period);
-    final double progress = remainingSeconds / account.period;
+    final isCounterBased = account.type == OtpType.hotp;
+    final int remainingSeconds = account.secondsRemaining(time: now);
+    final double progress =
+        isCounterBased ? 0 : remainingSeconds / account.period;
 
-    final formattedCode = code.length == 6 ? '${code.substring(0, 3)} ${code.substring(3)}' : code;
+    final formattedCode = _formatCode(code);
 
     return Dismissible(
       key: Key(account.id),
@@ -272,46 +277,75 @@ class _AccountCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      formattedCode,
-                      style: const TextStyle(
-                        fontSize: 34,
-                        color: Colors.white,
+                      codeError ?? formattedCode,
+                      style: TextStyle(
+                        fontSize: codeError != null ? 20 : 34,
+                        color: codeError != null
+                            ? Colors.redAccent
+                            : Colors.white,
                         fontWeight: FontWeight.w700,
-                        letterSpacing: 2.0,
+                        letterSpacing: codeError != null ? 0 : 2.0,
                       ),
                     ),
                   ],
                 ),
               ),
-              SizedBox(
-                width: 48,
-                height: 48,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CircularProgressIndicator(
-                      value: progress,
-                      backgroundColor: Colors.white12,
-                      color: remainingSeconds <= 5 ? Colors.redAccent : Colors.tealAccent,
-                      strokeWidth: 4,
-                    ),
-                    Center(
-                      child: Text(
-                        remainingSeconds.toString(),
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: remainingSeconds <= 5 ? Colors.redAccent : Colors.white70,
+              if (isCounterBased)
+                // HOTP codes do not expire on a clock; the user advances the
+                // counter explicitly when they need the next one.
+                Tooltip(
+                  message: 'Generate next code',
+                  child: IconButton(
+                    iconSize: 32,
+                    color: Colors.tealAccent,
+                    icon: const Icon(Icons.refresh),
+                    onPressed: () => ref
+                        .read(accountListProvider.notifier)
+                        .advanceCounter(account.id),
+                  ),
+                )
+              else
+                SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CircularProgressIndicator(
+                        value: progress,
+                        backgroundColor: Colors.white12,
+                        color: remainingSeconds <= 5
+                            ? Colors.redAccent
+                            : Colors.tealAccent,
+                        strokeWidth: 4,
+                      ),
+                      Center(
+                        child: Text(
+                          remainingSeconds.toString(),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: remainingSeconds <= 5
+                                ? Colors.redAccent
+                                : Colors.white70,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  /// Groups a code for readability: 6-digit as 3+3, 8-digit as 4+4.
+  /// Steam's five characters are left intact.
+  static String _formatCode(String code) {
+    if (code.length == 6) return '${code.substring(0, 3)} ${code.substring(3)}';
+    if (code.length == 8) return '${code.substring(0, 4)} ${code.substring(4)}';
+    return code;
   }
 }

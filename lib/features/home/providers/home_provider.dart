@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dula_auth/core/models/totp_account.dart';
+import 'package:dula_auth/core/models/otp_account.dart';
 import 'package:dula_auth/core/repositories/account_repository.dart';
 import 'package:dula_auth/features/auth/providers/auth_provider.dart';
 
@@ -7,7 +7,7 @@ final accountRepositoryProvider = Provider<AccountRepository>((ref) {
   return AccountRepository();
 });
 
-class AccountListNotifier extends StateNotifier<AsyncValue<List<TotpAccount>>> {
+class AccountListNotifier extends StateNotifier<AsyncValue<List<OtpAccount>>> {
   final AccountRepository _repository;
   final Ref _ref;
 
@@ -34,7 +34,7 @@ class AccountListNotifier extends StateNotifier<AsyncValue<List<TotpAccount>>> {
     }
   }
 
-  Future<bool> addAccount(TotpAccount account) async {
+  Future<bool> addAccount(OtpAccount account) async {
     final authState = _ref.read(authStateProvider);
     final success = await _repository.addAccount(account, masterKey: authState.masterKey);
     if (success) {
@@ -51,13 +51,31 @@ class AccountListNotifier extends StateNotifier<AsyncValue<List<TotpAccount>>> {
     }
   }
 
+  /// Advances an HOTP counter and persists it.
+  ///
+  /// Counter-based codes do not refresh on a clock; each use consumes one
+  /// value, so the stored counter must move forward atomically or the account
+  /// desynchronises from the server.
+  Future<void> advanceCounter(String id) async {
+    final authState = _ref.read(authStateProvider);
+    if (authState.masterKey == null) return;
+
+    final accounts = await _repository.getAccounts(masterKey: authState.masterKey);
+    final index = accounts.indexWhere((a) => a.id == id);
+    if (index == -1) return;
+
+    final updated = accounts[index].copyWith(counter: accounts[index].counter + 1);
+    final saved = await _repository.updateAccount(updated, masterKey: authState.masterKey);
+    if (saved) await loadAccounts();
+  }
+
   Future<void> clearAllAccounts() async {
     await _repository.clearAll();
     await loadAccounts();
   }
 }
 
-final accountListProvider = StateNotifierProvider<AccountListNotifier, AsyncValue<List<TotpAccount>>>((ref) {
+final accountListProvider = StateNotifierProvider<AccountListNotifier, AsyncValue<List<OtpAccount>>>((ref) {
   final notifier = AccountListNotifier(ref.read(accountRepositoryProvider), ref);
   
   // Reactively reload whenever the app becomes unlocked with a key available.

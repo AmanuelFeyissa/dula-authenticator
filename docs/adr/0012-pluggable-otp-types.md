@@ -1,7 +1,28 @@
 # ADR-0012: Pluggable OTP Types (TOTP, HOTP, Steam Guard, Custom Parameters)
 
 ## Status
-Proposed
+**Accepted — implemented.**
+
+Delivered in `lib/core/otp/` (`otp_type.dart`, `otp_algorithm.dart`,
+`otp_generator.dart`, `otp_uri.dart`) and `lib/core/models/otp_account.dart`, replacing
+`totp_engine.dart` and `totp_account.dart`, which were deleted.
+
+Validation: HOTP against all ten RFC 4226 Appendix D vectors; TOTP against the RFC 6238 SHA-1,
+SHA-256 and SHA-512 vectors including the 64-bit-counter case; Steam cross-validated against the
+reference JS implementation (npm `steam-totp`) rather than against this project's own output.
+98 unit tests and 11 end-to-end tests pass.
+
+The parameter-dropping bug described below is fixed: all `otpauth://` parsing now goes through
+`OtpUri`, and an end-to-end test asserts that an 8-digit SHA-256 credential is stored and rendered
+with those parameters intact. `OtpUri` also clamps out-of-range values and rejects unparseable
+input outright rather than storing an account that could never generate a valid code.
+
+Two deviations from the plan below, both deliberate:
+
+- **Per-type settings toggles were not built.** Type selection lives in the Add Account screen's
+  advanced section, which serves the same purpose without a settings surface that does not yet
+  exist. A deployment-level "only expose TOTP" switch belongs with the rest of the settings work.
+- **mOTP remains excluded**, as planned.
 
 ## Context
 `lib/core/totp_engine.dart` implements RFC 6238 TOTP correctly — including the RFC 4226 HOTP

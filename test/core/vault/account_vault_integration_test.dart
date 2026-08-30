@@ -2,15 +2,15 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dula_auth/core/crypto/vault_crypto.dart';
-import 'package:dula_auth/core/models/totp_account.dart';
+import 'package:dula_auth/core/models/otp_account.dart';
 import 'package:dula_auth/core/repositories/account_repository.dart';
-import 'package:dula_auth/core/totp_engine.dart';
+import 'package:dula_auth/core/otp/otp_algorithm.dart';
 import 'package:dula_auth/core/vault/secret_store.dart';
 import 'package:dula_auth/core/vault/vault_service.dart';
 
 const testParams = KdfParams(memoryKiB: 256, iterations: 1, parallelism: 1);
 
-TotpAccount account(String id, String secret) => TotpAccount(
+OtpAccount account(String id, String secret) => OtpAccount(
       id: id,
       issuer: 'Issuer $id',
       accountName: 'user$id@example.com',
@@ -66,15 +66,14 @@ void main() {
     final key = await vault.initialize('correct horse battery');
     const secret = 'JBSWY3DPEHPK3PXP';
     final when = DateTime.fromMillisecondsSinceEpoch(59000, isUtc: true);
-    final expected = TotpEngine.generateCode(secret: secret, time: when);
+    final expected =
+        OtpAccount(id: 'ref', issuer: '', accountName: '', secret: secret)
+            .generateCode(time: when);
 
     await repo.addAccount(account('1', secret), masterKey: key);
     final loaded = await repo.getAccounts(masterKey: key);
 
-    expect(
-      TotpEngine.generateCode(secret: loaded.single.secret, time: when),
-      expected,
-    );
+    expect(loaded.single.generateCode(time: when), expected);
   });
 
   test('surfaces tampering instead of returning a wrong secret', () async {
@@ -124,14 +123,14 @@ void main() {
 
   test('preserves non-default OTP parameters through storage', () async {
     final key = await vault.initialize('correct horse battery');
-    final custom = TotpAccount(
+    final custom = OtpAccount(
       id: '1',
       issuer: 'Custom',
       accountName: 'ops@example.com',
       secret: 'JBSWY3DPEHPK3PXP',
       digits: 8,
       period: 60,
-      algorithm: TotpAlgorithm.sha256,
+      algorithm: OtpAlgorithm.sha256,
     );
 
     await repo.addAccount(custom, masterKey: key);
@@ -139,6 +138,6 @@ void main() {
 
     expect(loaded.digits, 8);
     expect(loaded.period, 60);
-    expect(loaded.algorithm, TotpAlgorithm.sha256);
+    expect(loaded.algorithm, OtpAlgorithm.sha256);
   });
 }

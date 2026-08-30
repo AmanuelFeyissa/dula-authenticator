@@ -6,7 +6,9 @@ import 'package:integration_test/integration_test.dart';
 import 'package:dula_auth/core/branding/branding_config.dart';
 import 'package:dula_auth/core/crypto/vault_crypto.dart';
 import 'package:dula_auth/core/repositories/account_repository.dart';
-import 'package:dula_auth/core/models/totp_account.dart';
+import 'package:dula_auth/core/models/otp_account.dart';
+import 'package:dula_auth/core/otp/otp_algorithm.dart';
+import 'package:dula_auth/core/otp/otp_uri.dart';
 import 'package:dula_auth/core/vault/secret_store.dart';
 import 'package:dula_auth/core/vault/vault_service.dart';
 import 'package:dula_auth/core/widgets/app_lifecycle_wrapper.dart';
@@ -117,7 +119,7 @@ void main() {
     // Seed the vault as a returning user with two enrolled accounts.
     final key = await vault.initialize(pin);
     await accounts.addAccount(
-      TotpAccount(
+      OtpAccount(
         id: '1',
         issuer: 'GitHub',
         accountName: 'dev@example.com',
@@ -126,7 +128,7 @@ void main() {
       masterKey: key,
     );
     await accounts.addAccount(
-      TotpAccount(
+      OtpAccount(
         id: '2',
         issuer: 'AWS',
         accountName: 'ops@example.com',
@@ -167,7 +169,7 @@ void main() {
       (tester) async {
     final key = await vault.initialize(pin);
     await accounts.addAccount(
-      TotpAccount(
+      OtpAccount(
         id: '1',
         issuer: 'GitHub',
         accountName: 'dev@example.com',
@@ -184,6 +186,82 @@ void main() {
       () => accounts.getAccounts(masterKey: wrongKey),
       throwsA(isA<VaultDecryptionException>()),
     );
+  });
+
+  testWidgets('renders an 8-digit SHA-256 credential correctly',
+      (tester) async {
+    // Regression guard for the parameter-dropping bug: digits/period/algorithm
+    // used to be parsed and then discarded, so a credential like this rendered
+    // a 6-digit SHA-1 code — plausible, and wrong.
+    final key = await vault.initialize(pin);
+    final scanned = OtpUri.parse(
+      'otpauth://totp/Bank:ops@example.com?secret=JBSWY3DPEHPK3PXP'
+      '&digits=8&period=60&algorithm=SHA256',
+      id: '1',
+    )!;
+    await accounts.addAccount(scanned, masterKey: key);
+
+    await pumpApp(tester);
+    await enterPin(tester, pin);
+
+    expect(find.text('Bank'), findsOneWidget);
+    // 8-digit codes are grouped 4+4.
+    expect(
+      find.byWidgetPredicate((w) =>
+          w is Text && w.data != null && RegExp(r'^\d{4} \d{4}$').hasMatch(w.data!)),
+      findsOneWidget,
+    );
+
+    final stored = (await accounts.getAccounts(masterKey: key)).single;
+    expect(stored.digits, 8);
+    expect(stored.period, 60);
+    expect(stored.algorithm, OtpAlgorithm.sha256);
+  });
+
+  testWidgets('renders a Steam credential as five characters', (tester) async {
+    final key = await vault.initialize(pin);
+    await accounts.addAccount(
+      OtpUri.parse(
+        'otpauth://steam/Steam:gamer?secret=JBSWY3DPEHPK3PXP',
+        id: '1',
+      )!,
+      masterKey: key,
+    );
+
+    await pumpApp(tester);
+    await enterPin(tester, pin);
+
+    expect(
+      find.byWidgetPredicate((w) =>
+          w is Text &&
+          w.data != null &&
+          RegExp(r'^[23456789BCDFGHJKMNPQRTVWXY]{5}$').hasMatch(w.data!)),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('an HOTP credential offers an advance control', (tester) async {
+    final key = await vault.initialize(pin);
+    await accounts.addAccount(
+      OtpUri.parse(
+        'otpauth://hotp/Token:alice?secret=JBSWY3DPEHPK3PXP&counter=0',
+        id: '1',
+      )!,
+      masterKey: key,
+    );
+
+    await pumpApp(tester);
+    await enterPin(tester, pin);
+
+    // Counter-based codes never expire on a clock, so they show a refresh
+    // action rather than a countdown dial.
+    expect(find.byIcon(Icons.refresh), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.refresh));
+    await tester.pumpAndSettle(const Duration(seconds: 2));
+
+    final stored = (await accounts.getAccounts(masterKey: key)).single;
+    expect(stored.counter, 1, reason: 'advancing must persist the new counter');
   });
 
   testWidgets('unlock at production KDF cost stays responsive', (tester) async {

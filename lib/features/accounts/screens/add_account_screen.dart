@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dula_auth/core/models/totp_account.dart';
-import 'package:dula_auth/core/totp_engine.dart';
+import 'package:dula_auth/core/models/otp_account.dart';
+import 'package:dula_auth/core/otp/otp_algorithm.dart';
+import 'package:dula_auth/core/otp/otp_generator.dart';
+import 'package:dula_auth/core/otp/otp_type.dart';
+import 'package:dula_auth/core/otp/otp_uri.dart';
 import 'package:dula_auth/core/widgets/responsive_layout.dart';
 import 'package:dula_auth/core/branding/branded_logo.dart';
 import 'package:dula_auth/features/home/providers/home_provider.dart';
@@ -25,6 +28,13 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   final _accountNameController = TextEditingController();
   final _secretController = TextEditingController();
 
+  OtpType _type = OtpType.totp;
+  OtpAlgorithm _algorithm = OtpAlgorithm.sha1;
+  final _digitsController = TextEditingController(text: '6');
+  final _periodController = TextEditingController(text: '30');
+  final _counterController = TextEditingController(text: '0');
+  bool _showAdvanced = false;
+
   bool _isScanning = false;
   bool _isDragging = false;
   bool _isDecoding = false;
@@ -34,58 +44,57 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     _issuerController.dispose();
     _accountNameController.dispose();
     _secretController.dispose();
+    _digitsController.dispose();
+    _periodController.dispose();
+    _counterController.dispose();
     super.dispose();
   }
 
   void _processFoundUrl(String code) {
-    if (code.startsWith('otpauth://totp/')) {
-      try {
-        final uri = Uri.parse(code);
-        
-        final pathSegments = uri.pathSegments;
-        String label = pathSegments.isNotEmpty ? pathSegments.first : '';
-        label = Uri.decodeComponent(label);
-
-        String issuer = uri.queryParameters['issuer'] ?? '';
-        String accountName = label;
-
-        if (label.contains(':')) {
-          final parts = label.split(':');
-          issuer = parts[0].trim();
-          accountName = parts.sublist(1).join(':').trim();
-        }
-
-        final secret = uri.queryParameters['secret'] ?? '';
-
-        setState(() {
-          if (issuer.isNotEmpty) _issuerController.text = issuer;
-          if (accountName.isNotEmpty) _accountNameController.text = accountName;
-          _secretController.text = secret;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('QR Code Scanned successfully')),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid QR Code format')),
-        );
-      }
-    } else {
-      final base32Regex = RegExp(r'^[A-Z2-7=]+$');
-      if (base32Regex.hasMatch(code.toUpperCase().replaceAll(' ', ''))) {
-        setState(() {
-          _secretController.text = code.toUpperCase().replaceAll(' ', '');
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Found text secret directly')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Decoded text found, but not parsed: $code')),
-        );
-      }
+    // All otpauth parsing goes through OtpUri so that digits, period,
+    // algorithm, type and counter are actually honoured. The previous inline
+    // parser read those values and then discarded them, which silently
+    // produced wrong codes for any non-default credential.
+    final parsed = OtpUri.parse(code, id: _newId());
+    if (parsed != null) {
+      setState(() {
+        _issuerController.text = parsed.issuer;
+        _accountNameController.text = parsed.accountName;
+        _secretController.text = parsed.secret;
+        _type = parsed.type;
+        _algorithm = parsed.algorithm;
+        _digitsController.text = '${parsed.digits}';
+        _periodController.text = '${parsed.period}';
+        _counterController.text = '${parsed.counter}';
+        _showAdvanced = parsed.digits != 6 ||
+            parsed.period != 30 ||
+            parsed.algorithm != OtpAlgorithm.sha1 ||
+            parsed.type != OtpType.totp;
+      });
+      _notify('Scanned ${parsed.type.label} credential'
+          '${parsed.issuer.isNotEmpty ? ' for ${parsed.issuer}' : ''}');
+      return;
     }
+
+    // Not a URI — accept a bare base32 secret, which is what many services
+    // print alongside the QR code for manual entry.
+    final bare = code.replaceAll(RegExp(r'[\s-]'), '').toUpperCase();
+    try {
+      OtpGenerator.decodeSecret(bare);
+      setState(() => _secretController.text = bare);
+      _notify('Found a setup key');
+    } on FormatException {
+      _notify('That code is not a recognised authenticator credential');
+    }
+  }
+
+  String _newId() => DateTime.now().microsecondsSinceEpoch.toString();
+
+  void _notify(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   void _onDetect(BarcodeCapture capture) {
@@ -272,25 +281,41 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   }
 
   void _saveAccount() async {
-    if (_formKey.currentState!.validate()) {
-      final account = TotpAccount(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        issuer: _issuerController.text.trim(),
-        accountName: _accountNameController.text.trim(),
-        secret: _secretController.text.trim().replaceAll(' ', '').toUpperCase(),
-        algorithm: TotpAlgorithm.sha1,
-      );
+    if (!_formKey.currentState!.validate()) return;
 
-      final success = await ref.read(accountListProvider.notifier).addAccount(account);
-      if (success) {
-        if (mounted) Navigator.of(context).pop();
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to save account')),
-          );
-        }
-      }
+    final secret =
+        _secretController.text.trim().replaceAll(RegExp(r'[\s-]'), '').toUpperCase();
+
+    // Reject an unusable secret here rather than storing an account that can
+    // never generate a code.
+    try {
+      OtpGenerator.decodeSecret(secret);
+    } on FormatException {
+      _notify('That setup key is not valid base32');
+      return;
+    }
+
+    final account = OtpAccount(
+      id: _newId(),
+      issuer: _issuerController.text.trim(),
+      accountName: _accountNameController.text.trim(),
+      secret: secret,
+      type: _type,
+      digits: _type == OtpType.steam
+          ? 5
+          : int.tryParse(_digitsController.text) ?? 6,
+      period: int.tryParse(_periodController.text) ?? 30,
+      algorithm: _algorithm,
+      counter: int.tryParse(_counterController.text) ?? 0,
+    );
+
+    final success =
+        await ref.read(accountListProvider.notifier).addAccount(account);
+    if (!mounted) return;
+    if (success) {
+      Navigator.of(context).pop();
+    } else {
+      _notify('Failed to save account');
     }
   }
 
@@ -473,7 +498,168 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 8),
+                      // Advanced parameters. A no-camera user must be able to
+                      // enroll a non-default credential by hand, otherwise the
+                      // manual path would only support 6/30/SHA-1 (ADR-0006).
+                      Theme(
+                        data: Theme.of(context)
+                            .copyWith(dividerColor: Colors.transparent),
+                        child: ExpansionTile(
+                          initiallyExpanded: _showAdvanced,
+                          onExpansionChanged: (v) =>
+                              setState(() => _showAdvanced = v),
+                          tilePadding: EdgeInsets.zero,
+                          childrenPadding: const EdgeInsets.only(bottom: 8),
+                          iconColor: Colors.tealAccent,
+                          collapsedIconColor: Colors.white54,
+                          title: const Text(
+                            'Advanced options',
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 14),
+                          ),
+                          subtitle: Text(
+                            '${_type.label} - ${_algorithm.label}',
+                            style: const TextStyle(
+                                color: Colors.white38, fontSize: 12),
+                          ),
+                          children: [
+                            DropdownButtonFormField<OtpType>(
+                              initialValue: _type,
+                              dropdownColor: const Color(0xFF1E1B4B),
+                              style: const TextStyle(color: Colors.white),
+                              decoration: const InputDecoration(
+                                labelText: 'Code type',
+                                labelStyle: TextStyle(color: Colors.white70),
+                                border: OutlineInputBorder(),
+                                enabledBorder: OutlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.white24)),
+                              ),
+                              items: OtpType.values
+                                  .map((t) => DropdownMenuItem(
+                                        value: t,
+                                        child: Text(t.label),
+                                      ))
+                                  .toList(),
+                              onChanged: (v) {
+                                if (v == null) return;
+                                setState(() {
+                                  _type = v;
+                                  if (v == OtpType.steam) {
+                                    _digitsController.text = '5';
+                                    _algorithm = OtpAlgorithm.sha1;
+                                  } else if (_digitsController.text == '5') {
+                                    _digitsController.text = '6';
+                                  }
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            DropdownButtonFormField<OtpAlgorithm>(
+                              initialValue: _algorithm,
+                              dropdownColor: const Color(0xFF1E1B4B),
+                              style: const TextStyle(color: Colors.white),
+                              decoration: const InputDecoration(
+                                labelText: 'Algorithm',
+                                labelStyle: TextStyle(color: Colors.white70),
+                                border: OutlineInputBorder(),
+                                enabledBorder: OutlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.white24)),
+                              ),
+                              items: OtpAlgorithm.values
+                                  .map((a) => DropdownMenuItem(
+                                        value: a,
+                                        child: Text(a.label),
+                                      ))
+                                  .toList(),
+                              onChanged: _type == OtpType.steam
+                                  ? null
+                                  : (v) => setState(() =>
+                                      _algorithm = v ?? OtpAlgorithm.sha1),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _digitsController,
+                                    enabled: _type != OtpType.steam,
+                                    keyboardType: TextInputType.number,
+                                    style: const TextStyle(color: Colors.white),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Digits',
+                                      labelStyle:
+                                          TextStyle(color: Colors.white70),
+                                      border: OutlineInputBorder(),
+                                      enabledBorder: OutlineInputBorder(
+                                          borderSide:
+                                              BorderSide(color: Colors.white24)),
+                                    ),
+                                    validator: (v) {
+                                      if (_type == OtpType.steam) return null;
+                                      final n = int.tryParse(v ?? '');
+                                      if (n == null ||
+                                          n < OtpUri.minDigits ||
+                                          n > OtpUri.maxDigits) {
+                                        return 'Must be 6-10';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: _type == OtpType.hotp
+                                      ? TextFormField(
+                                          controller: _counterController,
+                                          keyboardType: TextInputType.number,
+                                          style: const TextStyle(
+                                              color: Colors.white),
+                                          decoration: const InputDecoration(
+                                            labelText: 'Counter',
+                                            labelStyle: TextStyle(
+                                                color: Colors.white70),
+                                            border: OutlineInputBorder(),
+                                            enabledBorder: OutlineInputBorder(
+                                                borderSide: BorderSide(
+                                                    color: Colors.white24)),
+                                          ),
+                                          validator: (v) =>
+                                              int.tryParse(v ?? '') == null
+                                                  ? 'Must be a number'
+                                                  : null,
+                                        )
+                                      : TextFormField(
+                                          controller: _periodController,
+                                          keyboardType: TextInputType.number,
+                                          style: const TextStyle(
+                                              color: Colors.white),
+                                          decoration: const InputDecoration(
+                                            labelText: 'Period (seconds)',
+                                            labelStyle: TextStyle(
+                                                color: Colors.white70),
+                                            border: OutlineInputBorder(),
+                                            enabledBorder: OutlineInputBorder(
+                                                borderSide: BorderSide(
+                                                    color: Colors.white24)),
+                                          ),
+                                          validator: (v) {
+                                            final n = int.tryParse(v ?? '');
+                                            if (n == null || n < 1 || n > 300) {
+                                              return 'Must be 1-300';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
                       ElevatedButton(
                         onPressed: _saveAccount,
                         style: ElevatedButton.styleFrom(
