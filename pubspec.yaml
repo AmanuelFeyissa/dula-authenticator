@@ -1,0 +1,71 @@
+name: dula_auth
+description: "DulaAuth - a cross-platform, open-source Time-based One-Time Password (TOTP) authenticator for Windows, Linux, macOS, Android, iOS, and Web."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  flutter_secure_storage: ^10.0.0
+  flutter_riverpod: ^2.5.1
+  hooks_riverpod: ^2.5.1
+  flutter_hooks: ^0.20.5
+  local_auth: ^2.2.0
+  crypto: ^3.0.7
+  base32: ^2.2.0
+  screen_protector: ^1.5.1
+  mobile_scanner: ^7.2.0
+  go_router: ^17.2.0
+  shared_preferences: ^2.5.5
+  zxing2: ^0.2.4
+  image: ^4.8.0
+  cross_file: ^0.3.5+2
+  pasteboard: ^0.5.0
+  super_drag_and_drop: ^0.9.1
+  cryptography: ^2.7.0
+  cryptography_flutter: ^2.3.2
+  root_checker_plus: ^0.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
+  msix: ^3.16.7
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/branding/branding.json
+    - assets/branding/logo.png
+
+# Platform launcher/app icons are generated from the branding logo.
+# Regenerate after changing the logo with: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: "assets/branding/logo.png"
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/branding/logo.png"
+    background_color: "#1E1B4B"
+    theme_color: "#1D4ED8"
+  windows:
+    generate: true
+    image_path: "assets/branding/logo.png"
+    icon_size: 256
+
+# No default flutter_launcher_icons/msix branding config ships in the open-source
+# project (see docs/adr/0002-white-label-branding.md and docs/BRANDING.md) - the
+# original bank's logo is not redistributed. A deployer who wants a custom app
+# icon and MSIX package identity should add their own flutter_launcher_icons and
+# msix_config blocks here, pointing at their own logo asset.

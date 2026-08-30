@@ -1,0 +1,20 @@
+Dula Authenticator
+Copyright 2026 Amanuel Feyissa Kussa
+
+Created and maintained by Amanuel Feyissa Kussa.
+
+Attribution to the original author must be retained in redistributions and derivative
+works, as required by Section 4 of the Apache License, Version 2.0.
+
+This product includes software developed by third parties. See pubspec.lock for the full
+dependency list and docs/LICENSE_AUDIT.md for a license audit of direct dependencies. Notable
+third-party components include, among others:
+
+  - Flutter and Dart, Copyright 2013 The Flutter Authors / the Dart project authors,
+    licensed under BSD-3-Clause.
+  - flutter_riverpod / hooks_riverpod / flutter_hooks, Copyright (c) Remi Rousselet,
+    licensed under MIT.
+  - flutter_secure_storage, Copyright 2017 German Saprykin, licensed under BSD-3-Clause.
+
+This NOTICE file is provided for informational purposes as required by the Apache License,
+Version 2.0, and does not modify the License.
