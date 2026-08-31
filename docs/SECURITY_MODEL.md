@@ -125,9 +125,12 @@ Support differs per platform, and the app must not imply protection it does not 
 
 | Capability | Android | iOS | Windows | macOS | Linux | Web |
 |---|---|---|---|---|---|---|
-| OS-backed secret storage | Keystore | Keychain | DPAPI | Keychain | libsecret — **requires a running keyring daemon** ([ADR-0004](adr/0004-secure-storage-linux-keyring.md)) | **None** |
+| OS-backed secret storage | Keystore | Keychain | DPAPI | Keychain | libsecret — **requires a running keyring daemon**, checked at startup with a blocking error if missing ([ADR-0004](adr/0004-secure-storage-linux-keyring.md)) | **None** |
 | Biometric unlock (`local_auth`) | yes | yes | yes (Hello) | yes | **no implementation** | **no implementation** |
 | Camera QR enrollment (`mobile_scanner`) | yes | yes | **no** | yes | **no** | yes |
+| Clipboard QR image paste (`pasteboard`) | yes | yes | yes | yes | yes | **no** |
+| Drag-and-drop QR image import | **no** | **no** | yes | yes | yes | **no** |
+| Manual secret-key entry | yes | yes | yes | yes | yes | yes |
 | Screenshot / recording block (`screen_protector`) | yes | yes | **no** | **no** | **no** | **no** |
 | Root / jailbreak detection (`root_checker_plus`) | yes | yes | **no** | **no** | **no** | **no** |
 | Backup file save (`file_picker`) | yes | yes | yes | yes | yes\* | yes (download) |
@@ -144,9 +147,13 @@ Notes on the gaps:
 - **Linux and Web have no biometric path.** Those users unlock with their credential, which is why
   ADR-0011 requires the credential to remain available everywhere. The settings screen says so
   rather than showing a switch that does nothing.
-- **Windows and Linux have no camera enrollment.** Manual entry is the universal path
-  ([ADR-0006](adr/0006-no-camera-enrollment-parity.md)), and it exposes every `otpauth://`
-  parameter, so a no-camera user is not limited to default credentials.
+- **Windows and Linux have no camera enrollment**, but do have clipboard-image paste and
+  drag-and-drop, in addition to manual entry. **Manual entry is the one path guaranteed on every
+  platform** ([ADR-0006](adr/0006-no-camera-enrollment-parity.md)), and it exposes every
+  `otpauth://` parameter, so a no-camera user is never limited to default credentials.
+- **Android and iOS gained clipboard-image paste** alongside camera scanning and manual entry —
+  previously camera-or-manual was the only choice on mobile, leaving no image-import fallback for
+  a no-camera-office user there (ADR-0006 §2).
 - **Screenshot protection and root detection are mobile-only.** On desktop, assume codes on screen
   can be captured.
 - **Web is the weakest deployment.** There is no OS keystore in a browser; stored data is protected

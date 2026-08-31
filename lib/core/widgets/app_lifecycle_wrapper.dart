@@ -6,10 +6,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:screen_protector/screen_protector.dart';
 import 'package:root_checker_plus/root_checker_plus.dart';
 import 'package:dula_auth/core/branding/branding_config.dart';
+import 'package:dula_auth/core/security/secure_storage_canary.dart';
+import 'package:dula_auth/core/vault/secret_store.dart';
 import 'package:dula_auth/features/auth/providers/auth_provider.dart';
 import 'package:dula_auth/features/auth/screens/app_lock_screen.dart';
 import 'package:dula_auth/features/auth/screens/credential_setup_screen.dart';
 import 'package:dula_auth/features/settings/providers/settings_provider.dart';
+
+/// The secret store this app talks to at startup. Overridden in tests with
+/// an in-memory or failing double so the Linux keyring canary (ADR-0004) can
+/// be exercised without a real platform channel.
+final secureStoreProvider =
+    Provider<SecretStore>((ref) => const FlutterSecretStore());
 
 class AppLifecycleWrapper extends ConsumerStatefulWidget {
   final Widget child;
@@ -24,6 +32,7 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
   Timer? _lockTimer;
   bool _isDeviceCompromised = false;
   bool _isInactive = false;
+  bool _secureStorageUnavailable = false;
 
   @override
   void initState() {
@@ -31,6 +40,17 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
     WidgetsBinding.instance.addObserver(this);
     _checkDeviceIntegrity();
     _protectScreen();
+    _checkSecureStorage();
+  }
+
+  Future<void> _checkSecureStorage() async {
+    if (kIsWeb || !secureStorageCanaryAppliesOn(defaultTargetPlatform)) {
+      return;
+    }
+    final ok = await SecureStorageCanary.check(ref.read(secureStoreProvider));
+    if (mounted && !ok) {
+      setState(() => _secureStorageUnavailable = true);
+    }
   }
   
   Future<void> _checkDeviceIntegrity() async {
@@ -109,6 +129,9 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
     if (_isDeviceCompromised) {
       return _buildCompromisedWarning();
     }
+    if (_secureStorageUnavailable) {
+      return _buildSecureStorageUnavailableWarning();
+    }
 
     final authState = ref.watch(authStateProvider);
     final branding = ref.watch(brandingConfigProvider);
@@ -153,6 +176,56 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
     }
 
     return content;
+  }
+
+  Widget _buildSecureStorageUnavailableWarning() {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.no_encryption_gmailerrorred,
+                  color: Colors.redAccent, size: 80),
+              const SizedBox(height: 24),
+              const Text(
+                'No secure credential store available',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'This system has no accessible secure credential store — '
+                'install and enable gnome-keyring or kwallet, or contact '
+                'your IT administrator. Continuing without one risks PINs, '
+                'passphrases, and TOTP secrets that are not actually saved.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 15),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  OutlinedButton(
+                    onPressed: () {
+                      setState(() => _secureStorageUnavailable = false);
+                      _checkSecureStorage();
+                    },
+                    child: const Text('RETRY'),
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton(
+                    onPressed: () => exit(0),
+                    child: const Text('CLOSE APPLICATION'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildCompromisedWarning() {

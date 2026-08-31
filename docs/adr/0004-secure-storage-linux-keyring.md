@@ -1,7 +1,7 @@
 # ADR-0004: Cross-Platform Secure Storage & the Linux Keyring Dependency
 
 ## Status
-Proposed
+Accepted — implemented (Phase 7)
 
 ## Context
 The app already uses `flutter_secure_storage` for the PIN hash, salt, cached master key, and
@@ -76,3 +76,20 @@ tracked as a Phase 3 validation task.
 - ["Failed to unlock the keyring" — flutter_secure_storage issue #778](https://github.com/juliansteenbakker/flutter_secure_storage/issues/778)
 - Direct review of `lib/core/repositories/account_repository.dart`,
   `lib/features/auth/repositories/auth_repository.dart` (existing broad `catch` behavior).
+
+## Implementation
+`lib/core/security/secure_storage_canary.dart` adds `SecureStorageCanary.check(SecretStore)` — a
+write/read-back/delete round trip, returning `false` on any exception or mismatch — plus
+`secureStorageCanaryAppliesOn(TargetPlatform)`, scoped to Linux only per Decision item 2 (every
+other platform's store does not depend on an optional daemon the way libsecret does, so the extra
+startup latency isn't justified elsewhere). `lib/core/widgets/app_lifecycle_wrapper.dart` runs the
+check in `initState` on Linux and, on failure, blocks with an explicit full-screen error naming
+`gnome-keyring`/`kwallet` and offering Retry or Close — taking precedence over the normal
+setup/lock/unlocked flow, mirroring the existing device-compromise gate. `secureStoreProvider`
+(`Provider<SecretStore>`) makes the store injectable so this is testable without a real platform
+channel: `test/core/security/secure_storage_canary_test.dart` covers the round trip against
+`InMemorySecretStore` and failure doubles; `test/core/widgets/app_lifecycle_wrapper_test.dart`
+covers the blocking screen end-to-end with `debugDefaultTargetPlatformOverride` and an
+in-memory-backed `AuthRepository`, avoiding any real secure-storage or biometrics plugin channel.
+Empirical validation against a real keyring-less Linux install (the Risk flagged above) remains a
+manual/CI task, not yet performed.

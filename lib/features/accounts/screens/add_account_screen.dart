@@ -9,6 +9,7 @@ import 'package:dula_auth/core/otp/otp_uri.dart';
 import 'package:dula_auth/core/widgets/responsive_layout.dart';
 import 'package:dula_auth/core/branding/branded_logo.dart';
 import 'package:dula_auth/core/theme/app_theme.dart';
+import 'package:dula_auth/features/accounts/enrollment_capabilities.dart';
 import 'package:dula_auth/features/home/providers/home_provider.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
@@ -386,15 +387,18 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
               if (!_isEditing) ...[
                 Row(
                   children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => setState(() => _isScanning = true),
-                        icon: const Icon(Icons.qr_code_scanner),
-                        label: const Text('Scan QR Code with Camera'),
+                    if (EnrollmentCapabilities.cameraScanning)
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => setState(() => _isScanning = true),
+                          icon: const Icon(Icons.qr_code_scanner),
+                          label: const Text('Scan QR Code with Camera'),
+                        ),
                       ),
-                    ),
-                    if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux)) ...[
+                    if (EnrollmentCapabilities.cameraScanning &&
+                        EnrollmentCapabilities.clipboardImagePaste)
                       const SizedBox(width: 16),
+                    if (EnrollmentCapabilities.clipboardImagePaste)
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: _pasteImage,
@@ -402,10 +406,9 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                           label: const Text('Paste Image'),
                         ),
                       ),
-                    ]
                   ],
                 ),
-                if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux)) ...[
+                if (EnrollmentCapabilities.dragAndDropImport) ...[
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(24),
@@ -690,8 +693,9 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       ),
     );
 
-    // Drag-and-drop QR import only applies to a new enrollment.
-    if (_isEditing) return scaffold;
+    // Drag-and-drop QR import only applies to a new enrollment, and only
+    // where the platform actually has a drop-target interaction to offer.
+    if (_isEditing || !EnrollmentCapabilities.dragAndDropImport) return scaffold;
 
     return DropRegion(
       formats: Formats.standardFormats,
