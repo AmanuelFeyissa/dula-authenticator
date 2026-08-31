@@ -7,6 +7,8 @@ import 'package:dula_auth/core/settings/app_settings.dart';
 import 'package:dula_auth/core/widgets/responsive_layout.dart';
 import 'package:dula_auth/features/auth/providers/auth_provider.dart';
 import 'package:dula_auth/features/auth/screens/change_credential_screen.dart';
+import 'package:dula_auth/features/backup/screens/backup_export_screen.dart';
+import 'package:dula_auth/features/backup/screens/backup_import_screen.dart';
 import 'package:dula_auth/features/settings/providers/settings_provider.dart';
 
 /// Security settings.
@@ -111,6 +113,32 @@ class SettingsScreen extends ConsumerWidget {
             ),
             if (settings.credentialRotationEnabled)
               _rotationPeriodTile(ref, settings),
+            const Divider(color: Colors.white12, height: 32),
+            const _SectionHeader('Backup'),
+            ListTile(
+              leading: const Icon(Icons.save_alt, color: Colors.white70),
+              title: const Text('Export backup'),
+              subtitle: const Text(
+                'Save every account to a local encrypted file.',
+                style: TextStyle(color: Colors.white54),
+              ),
+              trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const BackupExportScreen()),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.upload_file, color: Colors.white70),
+              title: const Text('Import accounts'),
+              subtitle: const Text(
+                'From this app\'s backup, a code, Aegis, or 2FAS.',
+                style: TextStyle(color: Colors.white54),
+              ),
+              trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const BackupImportScreen()),
+              ),
+            ),
             const Divider(color: Colors.white12, height: 32),
             const _SectionHeader('About'),
             ListTile(

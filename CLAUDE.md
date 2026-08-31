@@ -33,6 +33,9 @@ below) before proceeding — do not silently narrow scope back to a single-compa
   - `lib/core/crypto/` — Argon2id derivation, AES-256-GCM sealing, vault format record.
   - `lib/core/vault/` — vault lifecycle, re-keying, secret storage abstraction.
   - `lib/core/security/` — PIN and passphrase policy, credential kind, biometric gate.
+  - `lib/core/backup/` — encrypted backup export/import, and parsers for Google Authenticator,
+    Aegis, and 2FAS export formats. Every parser here consumes **untrusted, attacker-controllable
+    input** (a scanned code or an imported file) — see docs/adr/0013-backup-export-and-import.md.
   - `lib/core/repositories/account_repository.dart`, `lib/features/auth/**` — secret storage,
     credential policy/lockout, biometrics.
 - **The security model is documented in `docs/SECURITY_MODEL.md`** — threat model, the honest

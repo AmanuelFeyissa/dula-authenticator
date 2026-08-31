@@ -1,7 +1,71 @@
 # ADR-0013: Encrypted Backup, Export, and Import
 
 ## Status
-Proposed
+**Accepted — implemented.**
+
+Delivered in `lib/core/backup/` (`backup_service.dart`, `backup_file_io.dart`,
+`google_authenticator_migration.dart`, `aegis_import.dart`, `twofas_import.dart`,
+`import_merge.dart`, `import_source_detector.dart`, `third_party_import_result.dart`)
+and `lib/features/backup/screens/` (export, import, and import-review screens),
+wired into Settings. 90 unit tests and 4 new end-to-end tests pass (252 unit /
+25 end-to-end total for the app).
+
+What shipped against the decision below:
+
+1. **Local encrypted file, self-describing envelope** — done. The export file is
+   `{v, app, kdf, salt, payload}`, reusing the vault's own Argon2id + AES-256-GCM
+   primitives (ADR-0010). `v` and `app` let a future version recognise and refuse
+   a file it does not understand, rather than guessing.
+2. **Export passphrase independent of the unlock credential, never a PIN** —
+   done. `BackupService.export` runs the export value through
+   `PassphrasePolicy.validate` unconditionally, so a weak export passphrase is
+   refused in code, not merely discouraged in the UI, satisfying this ADR's own
+   Risks section.
+3. **Import priority order** — done for three of the four: plain `otpauth://`
+   URIs, Google Authenticator `otpauth-migration://` protobuf payloads, and this
+   app's own encrypted export. Aegis and 2FAS import is **scoped to their
+   unencrypted export** — see the deviation below.
+4. **No plaintext export by default** — unchanged; this app never writes an
+   unencrypted export at all, which is stricter than the ADR required.
+5. **No cloud sync** — unchanged; nothing added here calls out to a network.
+6. **Non-destructive merge with duplicate detection and review** — done via
+   `ImportMerge` (duplicate = identical issuer + account name + secret,
+   case/whitespace-insensitive) and `BackupImportReviewScreen`, which
+   pre-selects new accounts and pre-deselects duplicates but commits only
+   whatever the user leaves checked. Nothing is ever overwritten; a duplicate
+   the user re-selects is added as an additional entry, never merged over the
+   existing one.
+
+Deviations, both deliberate and both driven by the same principle — an
+unverified crypto implementation is worse than a documented gap:
+
+- **Aegis and 2FAS import supports their unencrypted export only.** Both apps
+  also offer a password-protected export (Aegis: scrypt-derived key wrapping,
+  AES-256-GCM; 2FAS: PBKDF2-HMAC-SHA256, AES-GCM). Implementing either without
+  a reference decoder or a real encrypted fixture to validate against — unlike
+  the Steam Guard algorithm in ADR-0012, which was cross-checked against the
+  reference `steam-totp` implementation — risks a subtly wrong decrypt of
+  someone's OTP vault, which is a worse outcome than declining to support it.
+  `AegisImport`/`TwoFasImport` recognise an encrypted file and tell the user to
+  re-export without a password, rather than rejecting it as unrecognised or,
+  worse, attempting an unverified decrypt.
+- **The Google Authenticator migration decoder is hand-written**, not built on
+  the `protobuf` package: the schema is two small, fixed messages, and this
+  keeps the air-gap-friendly dependency footprint down (ADR-0007). Validated
+  against a fixture built independently from the documented wire format — not
+  derived from the decoder's own code — covering multi-entry batches, every
+  enum value, and hostile input (truncated buffers, dangling varints, unknown
+  fields).
+- **No camera scanning for a migration QR code.** Add Account already owns
+  camera scanning for single `otpauth://` credentials; teaching it to also
+  recognise `otpauth-migration://` is left as a follow-up rather than a second
+  scanner implementation in the import screen. Today, a migration payload must
+  be pasted as text or supplied as a file.
+- **File-based import cannot be end-to-end tested.** `file_picker`'s native OS
+  dialog cannot be driven by an automated test without hanging the runner, so
+  the pasted-code path is covered end-to-end and the file-based parsers
+  (`BackupService`, `AegisImport`, `TwoFasImport`) are covered by unit tests
+  against real-shaped fixtures instead.
 
 ## Context
 The app currently has **no backup or export capability whatsoever**. Every TOTP secret lives in one

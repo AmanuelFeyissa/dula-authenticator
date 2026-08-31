@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:base32/base32.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -520,4 +523,186 @@ void main() {
           reason: 'NIST advises against forced rotation; it must be opt-in');
     });
   });
+
+  group('backup import', () {
+    // File-based import (own backup, Aegis, 2FAS) opens a native OS file
+    // dialog via file_picker, which cannot be driven by an automated test —
+    // that logic is covered directly in test/core/backup/. This suite
+    // exercises the paste-a-code path end to end, through the real widget
+    // tree and the real vault, which needs no native dialog.
+
+    Future<void> openImportScreen(WidgetTester tester) async {
+      await tester.tap(find.byIcon(Icons.settings));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Settings').last);
+      await tester.pumpAndSettle();
+      // The Backup section sits below the fold on a small window; scroll it
+      // into view before tapping rather than hitting whatever else is there.
+      await tester.ensureVisible(find.text('Import accounts'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Import accounts'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a pasted otpauth link is added after review', (tester) async {
+      await vault.initialize(pin, kind: CredentialKind.pin);
+      await pumpApp(tester);
+      await enterPin(tester, pin);
+      await openImportScreen(tester);
+
+      await tester.enterText(
+        find.byType(TextField).first,
+        'otpauth://totp/GitHub:dev@example.com?secret=JBSWY3DPEHPK3PXP',
+      );
+      await tester.ensureVisible(find.text('Import from code'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Import from code'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('NEW (1)'), findsOneWidget);
+      expect(find.text('GitHub'), findsOneWidget);
+
+      await tester.ensureVisible(find.byIcon(Icons.check));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.check));
+      await tester.pumpAndSettle();
+
+      expect(find.text('GitHub'), findsOneWidget);
+      expect(find.text('dev@example.com'), findsOneWidget);
+
+      final key = (await vault.unlock(pin)).key!;
+      final stored = await accounts.getAccounts(masterKey: key);
+      expect(stored.single.secret, 'JBSWY3DPEHPK3PXP');
+    });
+
+    testWidgets('a batch migration code lets the user deselect entries',
+        (tester) async {
+      await vault.initialize(pin, kind: CredentialKind.pin);
+      await pumpApp(tester);
+      await enterPin(tester, pin);
+      await openImportScreen(tester);
+
+      await tester.enterText(
+        find.byType(TextField).first,
+        _migrationUriWith(issuers: ['One', 'Two']),
+      );
+      await tester.ensureVisible(find.text('Import from code'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Import from code'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('NEW (2)'), findsOneWidget);
+      expect(find.text('One'), findsOneWidget);
+      expect(find.text('Two'), findsOneWidget);
+
+      // Deselect "Two" before committing.
+      await tester.ensureVisible(find.widgetWithText(CheckboxListTile, 'Two'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(CheckboxListTile, 'Two'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Import (1)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Import (1)'));
+      await tester.pumpAndSettle();
+
+      final key = (await vault.unlock(pin)).key!;
+      final stored = await accounts.getAccounts(masterKey: key);
+      expect(stored.map((a) => a.issuer), ['One']);
+    });
+
+    testWidgets('an unreadable code shows an error and imports nothing',
+        (tester) async {
+      await vault.initialize(pin, kind: CredentialKind.pin);
+      await pumpApp(tester);
+      await enterPin(tester, pin);
+      await openImportScreen(tester);
+
+      await tester.enterText(
+        find.byType(TextField).first,
+        'this is not a code at all',
+      );
+      await tester.ensureVisible(find.text('Import from code'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Import from code'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('does not look like'), findsOneWidget);
+      expect(find.text('New'), findsNothing);
+
+      final key = (await vault.unlock(pin)).key!;
+      expect(await accounts.getAccounts(masterKey: key), isEmpty);
+    });
+
+    testWidgets('importing the same code twice treats the second as a duplicate',
+        (tester) async {
+      final key = await vault.initialize(pin, kind: CredentialKind.pin);
+      await accounts.addAccount(
+        OtpAccount(
+          id: 'seed',
+          issuer: 'GitHub',
+          accountName: 'dev@example.com',
+          secret: 'JBSWY3DPEHPK3PXP',
+        ),
+        masterKey: key,
+      );
+
+      await pumpApp(tester);
+      await enterPin(tester, pin);
+      await openImportScreen(tester);
+
+      await tester.enterText(
+        find.byType(TextField).first,
+        'otpauth://totp/GitHub:dev@example.com?secret=JBSWY3DPEHPK3PXP',
+      );
+      await tester.ensureVisible(find.text('Import from code'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Import from code'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ALREADY IN YOUR VAULT (1)'), findsOneWidget);
+      expect(find.text('NEW ('), findsNothing);
+    });
+  });
+}
+
+/// Builds an `otpauth-migration://` payload with one entry per issuer, using
+/// the same protobuf wire-format rules the decoder implements — written
+/// independently here rather than imported from it, so this test cannot pass
+/// merely because both sides share a bug.
+String _migrationUriWith({required List<String> issuers}) {
+  List<int> varint(int value) {
+    final out = <int>[];
+    var v = value;
+    while (true) {
+      final byte = v & 0x7f;
+      v >>= 7;
+      if (v != 0) {
+        out.add(byte | 0x80);
+      } else {
+        out.add(byte);
+        break;
+      }
+    }
+    return out;
+  }
+
+  List<int> tag(int fieldNumber, int wireType) =>
+      varint((fieldNumber << 3) | wireType);
+
+  List<int> lengthDelimited(int fieldNumber, List<int> data) =>
+      [...tag(fieldNumber, 2), ...varint(data.length), ...data];
+
+  final secretBytes = base32.decode('JBSWY3DPEHPK3PXP');
+  final payload = <int>[];
+  for (final issuer in issuers) {
+    final entry = <int>[
+      ...lengthDelimited(1, secretBytes),
+      ...lengthDelimited(2, utf8.encode('user@example.com')),
+      ...lengthDelimited(3, utf8.encode(issuer)),
+    ];
+    payload.addAll(lengthDelimited(1, entry));
+  }
+
+  return 'otpauth-migration://offline?data='
+      '${Uri.encodeComponent(base64.encode(payload))}';
 }

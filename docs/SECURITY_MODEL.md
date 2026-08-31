@@ -36,10 +36,14 @@ Stated plainly rather than implying coverage:
 - **Shoulder-surfing of displayed codes**, and **the clipboard**: copying a code puts it on the
   system clipboard, where any other application can read it.
 - **Physical coercion.** There is no duress credential.
-- **Loss of the device with no backup.** Encrypted backup and restore is
-  [ADR-0013](adr/0013-backup-export-and-import.md); until it ships, a lost device means lost
-  secrets. There is deliberately no "forgot PIN" reset that keeps your accounts — such a thing
-  could not exist without a second copy of the key.
+- **Loss of the device with no backup taken.** Encrypted backup and restore exist
+  ([ADR-0013](adr/0013-backup-export-and-import.md)), but nothing creates one automatically —
+  a device lost before the user ever exported a backup means lost secrets. There is
+  deliberately no "forgot PIN" reset that keeps your accounts — such a thing could not exist
+  without a second copy of the key.
+- **A password-protected Aegis or 2FAS export.** This app does not implement either app's
+  encryption scheme (see "Backups" below) — it recognises such a file and asks for it to be
+  re-exported without a password, rather than guessing at an unverified decrypt.
 
 ## The credential
 
@@ -90,6 +94,31 @@ A future improvement is binding the key to a biometric-gated hardware keystore e
 StrongBox/TEE, iOS Secure Enclave) rather than a plain secure-storage read. That needs per-platform
 verification and is not claimed today.
 
+## Backups
+
+An exported backup is a single encrypted file: `{v, app, kdf, salt, payload}`, sealed with the
+same Argon2id + AES-256-GCM primitives as the vault itself, under a passphrase the user chooses
+at export time.
+
+**The export passphrase is independent of the unlock credential, and is never a PIN — this is
+enforced in code, not just suggested in the UI.** Once a backup file leaves the device, none of
+the on-device protections apply (no secure storage, no lockout): the attacker has the file
+offline and can guess against it at whatever rate their hardware allows. A 6-digit PIN's
+10<sup>6</sup> keyspace is not adequate protection for an offline file regardless of KDF cost, so
+`BackupService.export` refuses a passphrase that fails policy rather than encrypting anyway —
+even if the vault's own unlock credential is a PIN.
+
+There is no cloud sync, by design ([ADR-0007](adr/0007-air-gapped-operability.md),
+[ADR-0013](adr/0013-backup-export-and-import.md)): nothing about backup ever calls out to a
+network. The user chooses where the file goes and is responsible for it from there.
+
+**Import from Aegis and 2FAS supports their unencrypted export only.** Both apps also offer a
+password-protected export; decrypting either without a reference implementation or a real
+encrypted fixture to validate against — this project had neither — risks a subtly wrong decrypt
+of someone's OTP vault, which is worse than declining to support it. A password-protected file
+from either app is recognised and the user is told to re-export without a password, rather than
+being told the file is simply unrecognised.
+
 ## Platform capabilities — verified, not assumed
 
 Support differs per platform, and the app must not imply protection it does not have.
@@ -101,6 +130,14 @@ Support differs per platform, and the app must not imply protection it does not 
 | Camera QR enrollment (`mobile_scanner`) | yes | yes | **no** | yes | **no** | yes |
 | Screenshot / recording block (`screen_protector`) | yes | yes | **no** | **no** | **no** | **no** |
 | Root / jailbreak detection (`root_checker_plus`) | yes | yes | **no** | **no** | **no** | **no** |
+| Backup file save (`file_picker`) | yes | yes | yes | yes | yes\* | yes (download) |
+
+\* `file_picker`'s `saveFile(bytes: ...)` convenience is
+[documented as broken on Linux](https://github.com/miguelpruivo/flutter_file_picker/issues/1907)
+(package 10.3.3, Nov 2025): the call reports success but writes nothing. This app never relies on
+it — `saveFile()` is used only to obtain a destination path, and `dart:io` writes the bytes, which
+has no such bug. Web has no filesystem, so it is the one platform where passing `bytes` is both
+necessary and correct.
 
 Notes on the gaps:
 
