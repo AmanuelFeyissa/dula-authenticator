@@ -7,6 +7,7 @@ import 'package:dula_auth/core/branding/branded_logo.dart';
 import 'package:dula_auth/core/branding/branding_config.dart';
 import 'package:dula_auth/core/security/credential_kind.dart';
 import 'package:dula_auth/core/security/pin_policy.dart';
+import 'package:dula_auth/core/theme/app_theme.dart';
 import 'package:dula_auth/core/widgets/responsive_layout.dart';
 import 'package:dula_auth/features/auth/providers/auth_provider.dart';
 import 'package:dula_auth/features/auth/widgets/passphrase_field.dart';
@@ -196,13 +197,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen>
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF4C1D95), Color(0xFF5B21B6), Color(0xFF1E1B4B)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        decoration: brandGradientBackground(theme.colorScheme),
         child: SafeArea(
           child: ResponsiveLayout(
             child: LayoutBuilder(
@@ -222,12 +217,8 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen>
                         const SizedBox(height: 12),
                         Text(
                           branding.appName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 2.0,
-                          ),
+                          style: theme.textTheme.displaySmall
+                              ?.copyWith(color: Colors.white),
                         ),
                         const SizedBox(height: 32),
                         Text(

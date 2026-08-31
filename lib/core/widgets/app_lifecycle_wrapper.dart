@@ -133,7 +133,7 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
         children: [
           content,
           Container(
-            color: const Color(0xFF1E1B4B), // dark navy privacy overlay background
+            color: Theme.of(context).colorScheme.surface,
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

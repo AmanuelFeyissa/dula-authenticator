@@ -7,6 +7,7 @@ import 'package:dula_auth/core/branding/branding_config.dart';
 import 'package:dula_auth/core/config/deployment_config.dart';
 import 'package:dula_auth/core/settings/app_settings.dart';
 import 'package:dula_auth/core/widgets/responsive_layout.dart';
+import 'package:dula_auth/core/widgets/section_header.dart';
 import 'package:dula_auth/features/auth/providers/auth_provider.dart';
 import 'package:dula_auth/features/auth/screens/change_credential_screen.dart';
 import 'package:dula_auth/features/backup/screens/backup_export_screen.dart';
@@ -35,8 +36,6 @@ class SettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: branding.primarySeedColor,
-        foregroundColor: Colors.white,
         title: const Text('Settings'),
       ),
       body: ResponsiveLayout(
@@ -44,7 +43,7 @@ class SettingsScreen extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: ListView(
           children: [
-            const _SectionHeader('Unlocking'),
+            const SectionHeader('Unlocking'),
             _biometricTile(context, ref, settings, auth),
             ListTile(
               leading: const Icon(Icons.password, color: Colors.white70),
@@ -60,8 +59,8 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            const Divider(color: Colors.white12, height: 32),
-            const _SectionHeader('Automatic locking'),
+            const Divider(),
+            const SectionHeader('Automatic locking'),
             ListTile(
               leading: const Icon(Icons.lock_clock, color: Colors.white70),
               title: const Text('Lock when the app is in the background'),
@@ -71,7 +70,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               trailing: DropdownButton<AutoLockDelay>(
                 value: settings.autoLock,
-                dropdownColor: const Color(0xFF1E1B4B),
+                dropdownColor: Theme.of(context).colorScheme.surfaceContainerHigh,
                 underline: const SizedBox.shrink(),
                 onChanged: (value) {
                   if (value != null) {
@@ -92,8 +91,8 @@ class SettingsScreen extends ConsumerWidget {
                 'The app will stay unlocked until you close it. Anyone with '
                 'your unlocked device can read your codes.',
               ),
-            const Divider(color: Colors.white12, height: 32),
-            const _SectionHeader('Organization policy'),
+            const Divider(),
+            const SectionHeader('Organization policy'),
             SwitchListTile(
               secondary: const Icon(Icons.event_repeat, color: Colors.white70),
               title: const Text('Require periodic credential changes'),
@@ -114,9 +113,9 @@ class SettingsScreen extends ConsumerWidget {
               'exists for deployments whose compliance rules require it.',
             ),
             if (settings.credentialRotationEnabled)
-              _rotationPeriodTile(ref, settings),
-            const Divider(color: Colors.white12, height: 32),
-            const _SectionHeader('Backup'),
+              _rotationPeriodTile(context, ref, settings),
+            const Divider(),
+            const SectionHeader('Backup'),
             ListTile(
               leading: const Icon(Icons.save_alt, color: Colors.white70),
               title: const Text('Export backup'),
@@ -141,8 +140,8 @@ class SettingsScreen extends ConsumerWidget {
                 MaterialPageRoute(builder: (_) => const BackupImportScreen()),
               ),
             ),
-            const Divider(color: Colors.white12, height: 32),
-            const _SectionHeader('About'),
+            const Divider(),
+            const SectionHeader('About'),
             ListTile(
               leading: const BrandedLogo(size: 28),
               title: Text(branding.appName),
@@ -153,8 +152,8 @@ class SettingsScreen extends ConsumerWidget {
               ),
               isThreeLine: true,
             ),
-            const Divider(color: Colors.white12, height: 32),
-            const _SectionHeader('Danger zone'),
+            const Divider(),
+            const SectionHeader('Danger zone'),
             ListTile(
               leading:
                   const Icon(Icons.delete_forever, color: Colors.redAccent),
@@ -222,7 +221,8 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _rotationPeriodTile(WidgetRef ref, AppSettings settings) {
+  Widget _rotationPeriodTile(
+      BuildContext context, WidgetRef ref, AppSettings settings) {
     final options = ref.watch(deploymentConfigProvider).credentialRotationOptionsDays;
     return ListTile(
       leading: const SizedBox(width: 24),
@@ -231,7 +231,7 @@ class SettingsScreen extends ConsumerWidget {
         value: options.contains(settings.credentialRotationDays)
             ? settings.credentialRotationDays
             : AppSettings.defaultRotationDays,
-        dropdownColor: const Color(0xFF1E1B4B),
+        dropdownColor: Theme.of(context).colorScheme.surfaceContainerHigh,
         underline: const SizedBox.shrink(),
         onChanged: (value) {
           if (value != null) {
@@ -252,7 +252,6 @@ class SettingsScreen extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1B4B),
         title: const Text('Erase everything?'),
         content: const Text(
           'Every enrolled account will be deleted from this device and cannot '
@@ -283,27 +282,6 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  final String title;
-
-  const _SectionHeader(this.title);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: Text(
-        title.toUpperCase(),
-        style: const TextStyle(
-          color: Colors.tealAccent,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.4,
-        ),
-      ),
-    );
-  }
-}
 
 /// A plain explanation under a setting, for the cases where the honest answer
 /// is longer than a subtitle.
@@ -316,14 +294,7 @@ class _Advisory extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(72, 0, 16, 8),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white38,
-          fontSize: 12,
-          height: 1.4,
-        ),
-      ),
+      child: Text(text, style: Theme.of(context).textTheme.bodySmall),
     );
   }
 }

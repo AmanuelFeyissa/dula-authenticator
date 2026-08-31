@@ -10,7 +10,9 @@ import 'package:dula_auth/core/backup/third_party_import_result.dart';
 import 'package:dula_auth/core/backup/twofas_import.dart';
 import 'package:dula_auth/core/models/otp_account.dart';
 import 'package:dula_auth/core/otp/otp_uri.dart';
+import 'package:dula_auth/core/theme/app_theme.dart';
 import 'package:dula_auth/core/widgets/responsive_layout.dart';
+import 'package:dula_auth/core/widgets/section_header.dart';
 import 'package:dula_auth/features/auth/widgets/passphrase_field.dart';
 import 'package:dula_auth/features/backup/screens/backup_import_review_screen.dart';
 
@@ -150,7 +152,6 @@ class _BackupImportScreenState extends ConsumerState<BackupImportScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF1E1B4B),
           title: const Text('Backup passphrase'),
           content: PassphraseField(
             controller: _passphraseController,
@@ -197,18 +198,10 @@ class _BackupImportScreenState extends ConsumerState<BackupImportScreen> {
       appBar: AppBar(title: const Text('Import accounts')),
       body: ResponsiveLayout(
         maxWidth: 600,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: ListView(
           children: [
-            const Text(
-              'From a code',
-              style: TextStyle(
-                color: Colors.tealAccent,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-              ),
-            ),
+            const SectionHeader('From a code'),
             const SizedBox(height: 8),
             const Text(
               'Paste an otpauth:// link, or the otpauth-migration:// text '
@@ -231,16 +224,8 @@ class _BackupImportScreenState extends ConsumerState<BackupImportScreen> {
               onPressed: _busy ? null : _submitPastedCode,
               child: const Text('Import from code'),
             ),
-            const SizedBox(height: 32),
-            const Text(
-              'From a file',
-              style: TextStyle(
-                color: Colors.tealAccent,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-              ),
-            ),
+            const SizedBox(height: AppSpacing.xl),
+            const SectionHeader('From a file'),
             const SizedBox(height: 8),
             const Text(
               'A backup exported from this app, or an Aegis or 2FAS export '
@@ -260,6 +245,7 @@ class _BackupImportScreenState extends ConsumerState<BackupImportScreen> {
                 _error!,
                 style: const TextStyle(
                   color: Colors.redAccent,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
               ),

@@ -64,7 +64,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: branding.primarySeedColor,
         leading: const Padding(
           padding: EdgeInsets.all(8.0),
           child: BrandedLogo(),
@@ -143,7 +142,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err')),
+          error: (err, stack) => Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 80, color: Colors.white24),
+                const SizedBox(height: 24),
+                Text(
+                  'Something went wrong',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                Text('$err', style: const TextStyle(color: Colors.white54)),
+              ],
+            ),
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -213,9 +229,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildNoMatches() {
     return const Center(
-      child: Text(
-        'No accounts match this search or filter.',
-        style: TextStyle(color: Colors.white54),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.search_off, size: 80, color: Colors.white24),
+          SizedBox(height: 24),
+          Text(
+            'No accounts match this search or filter.',
+            style: TextStyle(color: Colors.white54),
+          ),
+        ],
       ),
     );
   }
@@ -263,8 +286,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1B4B),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -278,7 +299,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               'Version $version',
               style: const TextStyle(color: Colors.white70, fontSize: 14),
             ),
-            const Divider(color: Colors.white24, height: 32),
+            const Divider(),
             _buildInfoRow('Developer', branding.developerName),
             _buildInfoRow('License', 'Apache License 2.0'),
             const SizedBox(height: 24),
@@ -393,6 +414,13 @@ class _CorruptedAccountCard extends ConsumerWidget {
           color: Colors.redAccent.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -691,7 +719,6 @@ class _AccountCard extends ConsumerWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF1E1B4B),
           title: const Text('Tags'),
           content: SizedBox(
             width: 320,

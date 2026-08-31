@@ -8,6 +8,7 @@ import 'package:dula_auth/core/otp/otp_type.dart';
 import 'package:dula_auth/core/otp/otp_uri.dart';
 import 'package:dula_auth/core/widgets/responsive_layout.dart';
 import 'package:dula_auth/core/branding/branded_logo.dart';
+import 'package:dula_auth/core/theme/app_theme.dart';
 import 'package:dula_auth/features/home/providers/home_provider.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
@@ -359,7 +360,6 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     if (_isScanning) {
       return Scaffold(
         appBar: AppBar(
-          backgroundColor: const Color(0xFF5B21B6),
           title: const Text('Scan QR Code', style: TextStyle(color: Colors.white)),
           leading: IconButton(
             icon: const Icon(Icons.close, color: Colors.white),
@@ -391,11 +391,6 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                         onPressed: () => setState(() => _isScanning = true),
                         icon: const Icon(Icons.qr_code_scanner),
                         label: const Text('Scan QR Code with Camera'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          side: const BorderSide(color: Colors.tealAccent),
-                          foregroundColor: Colors.tealAccent,
-                        ),
                       ),
                     ),
                     if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux)) ...[
@@ -405,11 +400,6 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                           onPressed: _pasteImage,
                           icon: const Icon(Icons.paste),
                           label: const Text('Paste Image'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            side: const BorderSide(color: Colors.tealAccent),
-                            foregroundColor: Colors.tealAccent,
-                          ),
                         ),
                       ),
                     ]
@@ -421,7 +411,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: _isDragging ? Colors.tealAccent.withValues(alpha: 0.2) : Colors.white10,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.card),
                       border: Border.all(color: _isDragging ? Colors.tealAccent : Colors.white24, style: BorderStyle.solid),
                     ),
                     child: Column(
@@ -524,7 +514,8 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                           children: [
                             DropdownButtonFormField<OtpType>(
                               initialValue: _type,
-                              dropdownColor: const Color(0xFF1E1B4B),
+                              dropdownColor:
+                                  Theme.of(context).colorScheme.surfaceContainerHigh,
                               style: const TextStyle(color: Colors.white),
                               decoration: const InputDecoration(
                                 labelText: 'Code type',
@@ -556,7 +547,8 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                             const SizedBox(height: 16),
                             DropdownButtonFormField<OtpAlgorithm>(
                               initialValue: _algorithm,
-                              dropdownColor: const Color(0xFF1E1B4B),
+                              dropdownColor:
+                                  Theme.of(context).colorScheme.surfaceContainerHigh,
                               style: const TextStyle(color: Colors.white),
                               decoration: const InputDecoration(
                                 labelText: 'Algorithm',
@@ -660,15 +652,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _saveAccount,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.teal,
-                  foregroundColor: Colors.white,
-                ),
-                child: Text(
-                  _isEditing ? 'SAVE CHANGES' : 'ADD ACCOUNT',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
+                child: Text(_isEditing ? 'SAVE CHANGES' : 'ADD ACCOUNT'),
               ),
             ],
           ),
@@ -677,9 +661,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     );
 
     final scaffold = Scaffold(
-      backgroundColor: const Color(0xFF5B21B6),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF5B21B6),
         leading: const Padding(
           padding: EdgeInsets.all(8.0),
           child: BrandedLogo(),

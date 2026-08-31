@@ -9,6 +9,7 @@ import 'package:dula_auth/core/security/lockout_policy.dart';
 import 'package:dula_auth/core/security/passphrase_policy.dart';
 import 'package:dula_auth/core/security/pin_policy.dart';
 import 'package:dula_auth/core/settings/app_settings.dart';
+import 'package:dula_auth/core/theme/app_theme.dart';
 import 'package:dula_auth/core/widgets/app_lifecycle_wrapper.dart';
 import 'package:dula_auth/features/home/screens/home_screen.dart';
 
@@ -65,19 +66,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: branding.appName,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: branding.primarySeedColor,
-          brightness: Brightness.dark,
-          surface: const Color(0xFF1E1B4B), // Very dark navy/purple
-        ),
-        scaffoldBackgroundColor: branding.primarySeedColor,
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 0,
-        ),
-      ),
+      theme: buildAppTheme(branding),
       // AppLifecycleWrapper manages the lock screen overlay
       home: const AppLifecycleWrapper(
         child: HomeScreen(),

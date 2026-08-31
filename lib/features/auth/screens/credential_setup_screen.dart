@@ -6,6 +6,7 @@ import 'package:dula_auth/core/branding/branding_config.dart';
 import 'package:dula_auth/core/security/credential_kind.dart';
 import 'package:dula_auth/core/security/credential_policy.dart';
 import 'package:dula_auth/core/security/pin_policy.dart';
+import 'package:dula_auth/core/theme/app_theme.dart';
 import 'package:dula_auth/core/widgets/responsive_layout.dart';
 import 'package:dula_auth/features/auth/providers/auth_provider.dart';
 import 'package:dula_auth/features/auth/widgets/passphrase_field.dart';
@@ -163,16 +164,11 @@ class _CredentialSetupScreenState extends ConsumerState<CredentialSetupScreen> {
   @override
   Widget build(BuildContext context) {
     final branding = ref.watch(brandingConfigProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF4C1D95), Color(0xFF5B21B6), Color(0xFF1E1B4B)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        decoration: brandGradientBackground(theme.colorScheme),
         child: SafeArea(
           child: ResponsiveLayout(
             child: LayoutBuilder(
@@ -191,12 +187,8 @@ class _CredentialSetupScreenState extends ConsumerState<CredentialSetupScreen> {
                         const SizedBox(height: 12),
                         Text(
                           branding.appName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 2.0,
-                          ),
+                          style: theme.textTheme.displaySmall
+                              ?.copyWith(color: Colors.white),
                         ),
                         const SizedBox(height: 28),
                         _buildStep(compact),
@@ -230,14 +222,13 @@ class _CredentialSetupScreenState extends ConsumerState<CredentialSetupScreen> {
   Widget _buildChoose() {
     return Column(
       children: [
-        const Text(
+        Text(
           'How would you like to unlock?',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(context)
+              .textTheme
+              .titleLarge
+              ?.copyWith(color: Colors.white),
         ),
         const SizedBox(height: 8),
         const Text(
@@ -275,12 +266,10 @@ class _CredentialSetupScreenState extends ConsumerState<CredentialSetupScreen> {
                 : (_isRotation
                     ? 'Create New PIN'
                     : 'Create ${PinPolicy.pinLength}-Digit PIN'),
-            style: const TextStyle(
-              color: Colors.white70,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
-              fontSize: 16,
-            ),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Colors.white70,
+                  letterSpacing: 1.2,
+                ),
           ),
           const SizedBox(height: 24),
           PinDots(length: PinPolicy.pinLength, filled: _pin.length),
@@ -303,12 +292,10 @@ class _CredentialSetupScreenState extends ConsumerState<CredentialSetupScreen> {
           confirming
               ? 'Confirm Passphrase'
               : (_isRotation ? 'Create New Passphrase' : 'Create Passphrase'),
-          style: const TextStyle(
-            color: Colors.white70,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.2,
-            fontSize: 16,
-          ),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Colors.white70,
+                letterSpacing: 1.2,
+              ),
         ),
         const SizedBox(height: 24),
         PassphraseField(
@@ -339,13 +326,12 @@ class _CredentialSetupScreenState extends ConsumerState<CredentialSetupScreen> {
       children: [
         const Icon(Icons.fingerprint, size: 72, color: Colors.tealAccent),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'Unlock with biometrics?',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(context)
+              .textTheme
+              .titleLarge
+              ?.copyWith(color: Colors.white),
         ),
         const SizedBox(height: 12),
         Text(
@@ -415,14 +401,15 @@ class _ChoiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Material(
       color: Colors.white.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppRadius.card),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.card),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(
             children: [
               Icon(
@@ -430,27 +417,21 @@ class _ChoiceCard extends StatelessWidget {
                 color: Colors.tealAccent,
                 size: 28,
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       kind.label,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(color: Colors.white),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       kind.explanation,
-                      style: const TextStyle(
-                        color: Colors.white60,
-                        fontSize: 12,
-                        height: 1.35,
-                      ),
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: Colors.white60),
                     ),
                   ],
                 ),

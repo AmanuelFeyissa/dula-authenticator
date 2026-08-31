@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dula_auth/core/backup/import_merge.dart';
 import 'package:dula_auth/core/models/otp_account.dart';
 import 'package:dula_auth/core/widgets/responsive_layout.dart';
+import 'package:dula_auth/core/widgets/section_header.dart';
 import 'package:dula_auth/features/home/providers/home_provider.dart';
 
 /// Review step before an import is committed.
@@ -99,11 +100,11 @@ class _BackupImportReviewScreenState
                   Text(
                     '${widget.sourceLabel} — $totalIncoming account'
                     '${totalIncoming == 1 ? '' : 's'} found.',
-                    style: const TextStyle(color: Colors.white60, fontSize: 13),
+                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 16),
                   if (_plan.newAccounts.isNotEmpty) ...[
-                    _SectionHeader('New (${_plan.newAccounts.length})'),
+                    SectionHeader('New (${_plan.newAccounts.length})'),
                     for (final account in _plan.newAccounts)
                       _AccountTile(
                         account: account,
@@ -117,16 +118,16 @@ class _BackupImportReviewScreenState
                     const SizedBox(height: 16),
                   ],
                   if (_plan.duplicates.isNotEmpty) ...[
-                    _SectionHeader(
+                    SectionHeader(
                       'Already in your vault (${_plan.duplicates.length})',
                     ),
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
                       child: Text(
                         'These match an account you already have (same '
                         'issuer, account, and secret). They are not selected '
                         'by default — nothing is ever overwritten.',
-                        style: TextStyle(color: Colors.white38, fontSize: 12),
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
                     for (final duplicate in _plan.duplicates)
@@ -159,27 +160,6 @@ class _BackupImportReviewScreenState
                   : const Icon(Icons.check),
               label: Text('Import (${_selectedIncomingIds.length})'),
             ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  const _SectionHeader(this.title);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        title.toUpperCase(),
-        style: const TextStyle(
-          color: Colors.tealAccent,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
-        ),
-      ),
     );
   }
 }

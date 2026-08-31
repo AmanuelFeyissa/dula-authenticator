@@ -7,6 +7,7 @@ import 'package:dula_auth/core/security/credential_policy.dart';
 import 'package:dula_auth/core/security/passphrase_policy.dart';
 import 'package:dula_auth/core/security/pin_policy.dart';
 import 'package:dula_auth/core/widgets/responsive_layout.dart';
+import 'package:dula_auth/core/widgets/section_header.dart';
 import 'package:dula_auth/features/auth/providers/auth_provider.dart';
 
 /// Replaces the unlock credential, optionally switching between a PIN and a
@@ -107,11 +108,7 @@ class _ChangeCredentialScreenState
             Text(
               'Your accounts stay exactly where they are — the vault is '
               're-encrypted under the new credential.',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.6),
-                fontSize: 13,
-                height: 1.4,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 28),
             _field(
@@ -121,15 +118,7 @@ class _ChangeCredentialScreenState
               autofocus: true,
             ),
             const SizedBox(height: 28),
-            const Text(
-              'NEW CREDENTIAL',
-              style: TextStyle(
-                color: Colors.tealAccent,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.4,
-              ),
-            ),
+            const SectionHeader('New credential'),
             const SizedBox(height: 12),
             SegmentedButton<CredentialKind>(
               segments: [
@@ -186,6 +175,7 @@ class _ChangeCredentialScreenState
                 _error!,
                 style: const TextStyle(
                   color: Colors.redAccent,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
               ),

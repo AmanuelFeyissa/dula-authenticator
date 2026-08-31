@@ -120,15 +120,15 @@ class _BackupExportScreenState extends ConsumerState<BackupExportScreen> {
               accountCount == 1
                   ? '1 account will be exported.'
                   : '$accountCount accounts will be exported.',
-              style: const TextStyle(color: Colors.white60, fontSize: 13),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'This passphrase protects the file, and is separate from your '
               'unlock PIN or passphrase — anyone who obtains this file will '
               'try to guess it offline, so choose something strong. Nothing '
               'is sent anywhere; you choose where the file is saved.',
-              style: TextStyle(color: Colors.white38, fontSize: 12, height: 1.4),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 24),
             PassphraseField(
