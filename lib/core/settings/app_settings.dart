@@ -49,10 +49,41 @@ enum AutoLockDelay {
 /// are acceptable, how patient their auto-lock should be, or whether their
 /// organization's compliance regime forces credential rotation.
 class AppSettings {
-  static const AutoLockDelay defaultAutoLock = AutoLockDelay.thirtySeconds;
-  static const int defaultRotationDays = 90;
-  static const int minRotationDays = 1;
-  static const int maxRotationDays = 3650;
+  /// Deployer-configurable via `assets/config/deployment_config.json`'s
+  /// `security.defaultAutoLock`/`security.credentialRotation*` fields (see
+  /// docs/adr/0016-deployment-configuration.md) through [configureDefaults].
+  /// Mutable statics rather than constructor parameters, and the reason this
+  /// class's constructor is no longer `const`: a mutable static cannot be a
+  /// `const` default-parameter literal, and every caller that previously
+  /// wrote `const AppSettings()` now writes `AppSettings()`.
+  static AutoLockDelay defaultAutoLock = AutoLockDelay.thirtySeconds;
+  static int defaultRotationDays = 90;
+  static int minRotationDays = 1;
+  static int maxRotationDays = 3650;
+
+  /// Sets the defaults above. Call once at startup, before any
+  /// [AppSettings] is constructed. Omitted parameters keep their current
+  /// value.
+  static void configureDefaults({
+    AutoLockDelay? autoLock,
+    int? rotationDays,
+    int? minRotationDays,
+    int? maxRotationDays,
+  }) {
+    defaultAutoLock = autoLock ?? defaultAutoLock;
+    defaultRotationDays = rotationDays ?? defaultRotationDays;
+    AppSettings.minRotationDays = minRotationDays ?? AppSettings.minRotationDays;
+    AppSettings.maxRotationDays = maxRotationDays ?? AppSettings.maxRotationDays;
+  }
+
+  /// Restores the historical defaults. Test-only — call in `tearDown` after
+  /// any test that calls [configureDefaults].
+  static void resetDefaultsForTesting() {
+    defaultAutoLock = AutoLockDelay.thirtySeconds;
+    defaultRotationDays = 90;
+    minRotationDays = 1;
+    maxRotationDays = 3650;
+  }
 
   /// Grace period before a backgrounded app locks itself.
   final AutoLockDelay autoLock;
@@ -72,12 +103,13 @@ class AppSettings {
   /// Rotation period in days, applied only when [credentialRotationEnabled].
   final int credentialRotationDays;
 
-  const AppSettings({
-    this.autoLock = defaultAutoLock,
+  AppSettings({
+    AutoLockDelay? autoLock,
     this.biometricUnlockEnabled = false,
     this.credentialRotationEnabled = false,
-    this.credentialRotationDays = defaultRotationDays,
-  });
+    int? credentialRotationDays,
+  })  : autoLock = autoLock ?? defaultAutoLock,
+        credentialRotationDays = credentialRotationDays ?? defaultRotationDays;
 
   /// Whether a credential set on [lastSet] must now be rotated.
   ///

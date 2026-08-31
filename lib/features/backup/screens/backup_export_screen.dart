@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:dula_auth/core/backup/backup_file_io.dart';
 import 'package:dula_auth/core/backup/backup_service.dart';
+import 'package:dula_auth/core/branding/branding_config.dart';
+import 'package:dula_auth/core/config/deployment_config.dart';
 import 'package:dula_auth/core/widgets/responsive_layout.dart';
 import 'package:dula_auth/features/auth/widgets/passphrase_field.dart';
 import 'package:dula_auth/features/home/providers/home_provider.dart';
@@ -73,7 +75,7 @@ class _BackupExportScreenState extends ConsumerState<BackupExportScreen> {
         final stamp = DateTime.now().toIso8601String().split('T').first;
         final saved = await BackupFileIO.save(
           content: fileContent,
-          suggestedName: 'dula-auth-backup-$stamp.json',
+          suggestedName: '${_backupFileNamePrefix(ref)}$stamp.json',
         );
         if (!mounted) return;
         setState(() => _busy = false);
@@ -84,6 +86,23 @@ class _BackupExportScreenState extends ConsumerState<BackupExportScreen> {
           );
         }
     }
+  }
+
+  /// The exported file's name prefix. Deployer-configurable via
+  /// `assets/config/deployment_config.json`'s `backup.fileNamePrefix`; when
+  /// that's null (the default), it's derived from the branding config's
+  /// `appName` instead of a hardcoded brand name (see
+  /// docs/adr/0016-deployment-configuration.md).
+  String _backupFileNamePrefix(WidgetRef ref) {
+    final configured = ref.read(deploymentConfigProvider).backupFileNamePrefix;
+    if (configured != null) return configured;
+
+    final appName = ref.read(brandingConfigProvider).appName;
+    final slug = appName
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'^-+|-+$'), '');
+    return '${slug.isEmpty ? 'backup' : slug}-backup-';
   }
 
   @override

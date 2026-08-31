@@ -80,20 +80,21 @@ class BackupService {
   static Future<BackupExportResult> export(
     List<OtpAccount> accounts,
     String passphrase, {
-    KdfParams params = KdfParams.owaspDefault,
+    KdfParams? params,
   }) async {
     final policyError = PassphrasePolicy.validate(passphrase);
     if (policyError != null) return BackupExportRejected(policyError);
 
+    final resolvedParams = params ?? KdfParams.deploymentDefault;
     final salt = _randomSalt();
-    final key = await VaultCrypto.deriveKey(passphrase, salt, params);
+    final key = await VaultCrypto.deriveKey(passphrase, salt, resolvedParams);
     final plaintext = jsonEncode(accounts.map((a) => a.toMap()).toList());
     final sealed = await VaultCrypto.encrypt(plaintext, key);
 
     final envelope = {
       'v': formatVersion,
       'app': appIdentifier,
-      'kdf': params.toMap(),
+      'kdf': resolvedParams.toMap(),
       'salt': base64.encode(salt),
       'payload': sealed,
     };

@@ -21,9 +21,9 @@ Everything else here exists to serve that.
 |---|---|
 | Someone picks up your unlocked device | Auto-lock (configurable, default 30s in background) |
 | Someone steals the device and reads app storage | Secrets are AES-256-GCM sealed under an Argon2id-derived key; the credential is never stored |
-| Someone guesses your PIN or passphrase interactively | Strength policy plus escalating lockout (30s / 5min / 1h) |
-| Someone copies the vault and attacks it offline | Argon2id at OWASP parameters (m=19456 KiB, t=2, p=1) makes each guess expensive |
-| Someone tampers with stored ciphertext | AES-GCM authenticates; a modified record fails loudly (`VaultDecryptionException`) rather than decrypting to garbage |
+| Someone guesses your PIN or passphrase interactively | Strength policy plus escalating lockout (default 30s / 5min / 1h, deployer-configurable — [ADR-0016](adr/0016-deployment-configuration.md)) |
+| Someone copies the vault and attacks it offline | Argon2id at OWASP-minimum parameters by default (m=19456 KiB, t=2, p=1, deployer-configurable) makes each guess expensive |
+| Someone tampers with stored ciphertext | AES-GCM authenticates; a modified record is isolated as a per-account error (surfaced via `loadError`, [ADR-0015](adr/0015-account-management.md)) rather than decrypting to garbage or blocking the rest of the vault |
 | A network observer | There is no network. The app makes no outbound calls of any kind ([ADR-0007](adr/0007-air-gapped-operability.md)) |
 
 ### Not defended against
@@ -157,7 +157,7 @@ Notes on the gaps:
 
 | Element | Choice | Rationale |
 |---|---|---|
-| Key derivation | Argon2id, m=19456 KiB, t=2, p=1, 32-byte random salt | OWASP-recommended parameters ([ADR-0010](adr/0010-vault-cryptography-modernization.md)) |
+| Key derivation | Argon2id, m=19456 KiB, t=2, p=1 by default, 32-byte random salt | OWASP-recommended parameters ([ADR-0010](adr/0010-vault-cryptography-modernization.md)); the cost parameters (not the algorithm) are deployer-configurable per [ADR-0016](adr/0016-deployment-configuration.md) — see [docs/CONFIGURATION.md](CONFIGURATION.md) |
 | Encryption | AES-256-GCM, fresh nonce per record | Authenticated — tampering is detected, not silently decrypted |
 | Credential check | Verifier derived from the Argon2id output, constant-time compared | The credential itself is never stored |
 | Format | Versioned `vault_meta` recording version and KDF cost | A newer format is refused rather than guessed at; cost can be raised later without stranding vaults |

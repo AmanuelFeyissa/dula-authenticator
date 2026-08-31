@@ -79,4 +79,30 @@ void main() {
       expect(PinPolicy.isWeakPattern('1234567'), isFalse);
     });
   });
+
+  group('PinPolicy.configure', () {
+    tearDown(PinPolicy.resetForTesting);
+
+    test('changes the length validate() enforces', () {
+      PinPolicy.configure(pinLength: 4);
+      expect(PinPolicy.validate('1928'), isNull);
+      expect(PinPolicy.validate('19283'), contains('exactly 4 digits'));
+    });
+
+    test('skips the curated 6-digit blocklist and pattern checks at a non-default length', () {
+      PinPolicy.configure(pinLength: 4);
+      // '1234' would be an ascending sequence at length 6 semantics, and
+      // '1212' would previously have crashed the 6-digit-specific pattern
+      // helpers (which slice into fixed-size pairs) if they ran at length 4.
+      expect(PinPolicy.validate('1234'), isNull);
+      expect(PinPolicy.validate('1212'), isNull);
+    });
+
+    test('resetForTesting restores the default length and blocklist', () {
+      PinPolicy.configure(pinLength: 4);
+      PinPolicy.resetForTesting();
+      expect(PinPolicy.pinLength, 6);
+      expect(PinPolicy.validate('696969'), contains('too common'));
+    });
+  });
 }

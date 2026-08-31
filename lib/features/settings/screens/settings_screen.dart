@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:dula_auth/core/app_version.dart';
 import 'package:dula_auth/core/branding/branded_logo.dart';
 import 'package:dula_auth/core/branding/branding_config.dart';
+import 'package:dula_auth/core/config/deployment_config.dart';
 import 'package:dula_auth/core/settings/app_settings.dart';
 import 'package:dula_auth/core/widgets/responsive_layout.dart';
 import 'package:dula_auth/features/auth/providers/auth_provider.dart';
@@ -145,7 +147,7 @@ class SettingsScreen extends ConsumerWidget {
               leading: const BrandedLogo(size: 28),
               title: Text(branding.appName),
               subtitle: Text(
-                'Version 1.0.0 · Apache License 2.0\n'
+                'Version ${ref.watch(packageInfoProvider).version} · Apache License 2.0\n'
                 'Developed by ${branding.developerName}',
                 style: const TextStyle(color: Colors.white54),
               ),
@@ -221,7 +223,7 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Widget _rotationPeriodTile(WidgetRef ref, AppSettings settings) {
-    const options = [30, 60, 90, 180, 365];
+    final options = ref.watch(deploymentConfigProvider).credentialRotationOptionsDays;
     return ListTile(
       leading: const SizedBox(width: 24),
       title: const Text('Change every'),

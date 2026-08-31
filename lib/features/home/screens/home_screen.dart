@@ -5,8 +5,10 @@ import 'package:dula_auth/core/otp/otp_type.dart';
 import 'package:dula_auth/core/widgets/responsive_layout.dart';
 import 'package:dula_auth/features/home/providers/home_provider.dart';
 import 'package:flutter/services.dart';
+import 'package:dula_auth/core/app_version.dart';
 import 'package:dula_auth/core/branding/branded_logo.dart';
 import 'package:dula_auth/core/branding/branding_config.dart';
+import 'package:dula_auth/core/config/deployment_config.dart';
 import 'package:dula_auth/features/accounts/screens/add_account_screen.dart';
 import 'package:dula_auth/features/settings/screens/settings_screen.dart';
 
@@ -256,6 +258,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _showAboutDialog(BuildContext context, BrandingConfig branding) {
+    final version = ref.read(packageInfoProvider).version;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -267,12 +271,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const BrandedLogo(size: 80),
             const SizedBox(height: 20),
             Text(
-              '${branding.appName} Authenticator',
+              branding.appName,
               style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            const Text(
-              'Version 1.0.0',
-              style: TextStyle(color: Colors.white70, fontSize: 14),
+            Text(
+              'Version $version',
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
             ),
             const Divider(color: Colors.white24, height: 32),
             _buildInfoRow('Developer', branding.developerName),
@@ -480,13 +484,15 @@ class _AccountCard extends ConsumerWidget {
       child: GestureDetector(
         onTap: () {
           Clipboard.setData(ClipboardData(text: code));
+          final snackbarSeconds =
+              ref.read(deploymentConfigProvider).copiedToClipboardSnackbarSeconds;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
+            SnackBar(
+              content: const Text(
                 'Code copied to clipboard',
                 textAlign: TextAlign.center,
               ),
-              duration: Duration(seconds: 1),
+              duration: Duration(seconds: snackbarSeconds),
             ),
           );
         },

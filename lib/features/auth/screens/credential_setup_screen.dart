@@ -272,7 +272,9 @@ class _CredentialSetupScreenState extends ConsumerState<CredentialSetupScreen> {
           Text(
             confirming
                 ? 'Confirm PIN'
-                : (_isRotation ? 'Create New PIN' : 'Create 6-Digit PIN'),
+                : (_isRotation
+                    ? 'Create New PIN'
+                    : 'Create ${PinPolicy.pinLength}-Digit PIN'),
             style: const TextStyle(
               color: Colors.white70,
               fontWeight: FontWeight.bold,

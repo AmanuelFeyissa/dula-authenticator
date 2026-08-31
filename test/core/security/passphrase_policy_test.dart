@@ -147,4 +147,35 @@ void main() {
       );
     });
   });
+
+  group('PassphrasePolicy.configure', () {
+    tearDown(PassphrasePolicy.resetForTesting);
+
+    test('changes the enforced minimum length', () {
+      PassphrasePolicy.configure(minLength: 20);
+      expect(PassphrasePolicy.validate('rope anchor lantern'.padRight(19, 'x')),
+          contains('20'));
+      expect(PassphrasePolicy.validate('rope anchor lantern'.padRight(20, 'x')),
+          isNull);
+    });
+
+    test('changes the enforced maximum length', () {
+      PassphrasePolicy.configure(maxLength: 20);
+      expect(PassphrasePolicy.validate('x' * 21), isNotNull);
+    });
+
+    test('changes the recommended length used for strength guidance', () {
+      PassphrasePolicy.configure(recommendedLength: 5);
+      expect(PassphrasePolicy.strengthOf('rope-anchor-9').index,
+          greaterThanOrEqualTo(PassphraseStrength.fair.index));
+    });
+
+    test('resetForTesting restores the default thresholds', () {
+      PassphrasePolicy.configure(minLength: 20, recommendedLength: 25, maxLength: 30);
+      PassphrasePolicy.resetForTesting();
+      expect(PassphrasePolicy.minLength, 12);
+      expect(PassphrasePolicy.recommendedLength, 15);
+      expect(PassphrasePolicy.maxLength, 256);
+    });
+  });
 }

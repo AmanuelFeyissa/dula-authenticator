@@ -3,6 +3,11 @@
 Dula Authenticator is white-label by design. Any organization can rebrand it without editing a
 single line of Dart. This guide covers what you can change, where, and what you must keep.
 
+This file covers visual/organizational identity only. For security policy and other product
+tunables (PIN length, lockout backoff, Argon2id cost, backup file naming, and more), see
+[`docs/CONFIGURATION.md`](CONFIGURATION.md) — kept as a separate file and a separate guide because
+those changes affect security behavior, not just appearance.
+
 ## Quick start: the 60-second rebrand
 
 Everything the UI displays comes from one file: **`assets/branding/branding.json`**.

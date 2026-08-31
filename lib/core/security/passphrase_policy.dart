@@ -23,15 +23,40 @@ class PassphrasePolicy {
   /// Floor for acceptance. NIST SP 800-63B sets 8 as the minimum for
   /// user-chosen secrets; this vault is attackable offline by anyone who
   /// obtains the device, so the floor is raised.
-  static const int minLength = 12;
+  ///
+  /// Deployer-configurable via `assets/config/deployment_config.json`'s
+  /// `security.passphraseMinLength` (see
+  /// docs/adr/0016-deployment-configuration.md) through [configure] — a
+  /// mutable static for the same reason as `PinPolicy.pinLength`: this
+  /// class is a stateless utility with no existing dependency-injection
+  /// path.
+  static int minLength = 12;
 
   /// Length at which NIST's own recommendation for user-chosen passwords is
   /// met. Surfaced as guidance, not enforced.
-  static const int recommendedLength = 15;
+  static int recommendedLength = 15;
 
   /// Verifiers must accept long secrets (NIST requires at least 64). The cap
   /// exists only to bound input, not to discourage length.
-  static const int maxLength = 256;
+  static int maxLength = 256;
+
+  /// Sets [minLength]/[recommendedLength]/[maxLength]. Call once at startup,
+  /// before any passphrase is validated. Omitted parameters keep their
+  /// current value.
+  static void configure({int? minLength, int? recommendedLength, int? maxLength}) {
+    PassphrasePolicy.minLength = minLength ?? PassphrasePolicy.minLength;
+    PassphrasePolicy.recommendedLength =
+        recommendedLength ?? PassphrasePolicy.recommendedLength;
+    PassphrasePolicy.maxLength = maxLength ?? PassphrasePolicy.maxLength;
+  }
+
+  /// Restores the default thresholds. Test-only — call in `tearDown` after
+  /// any test that calls [configure].
+  static void resetForTesting() {
+    minLength = 12;
+    recommendedLength = 15;
+    maxLength = 256;
+  }
 
   /// Predictable values, stored in normalized form (see [_normalize]).
   ///

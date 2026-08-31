@@ -32,6 +32,7 @@ dependencies:
   cryptography_flutter: ^2.3.2
   root_checker_plus: ^0.0.1
   file_picker: ^11.0.3
+  package_info_plus: ^8.3.0
 
 dev_dependencies:
   flutter_test:
@@ -47,6 +48,7 @@ flutter:
   assets:
     - assets/branding/branding.json
     - assets/branding/logo.png
+    - assets/config/deployment_config.json
 
 # Platform launcher/app icons are generated from the branding logo.
 # Regenerate after changing the logo with: dart run flutter_launcher_icons

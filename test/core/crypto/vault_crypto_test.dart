@@ -52,6 +52,30 @@ void main() {
     });
   });
 
+  group('KdfParams.deploymentDefault', () {
+    tearDown(KdfParams.resetForTesting);
+
+    test('starts equal to the fixed OWASP floor', () {
+      expect(KdfParams.deploymentDefault, KdfParams.owaspDefault);
+    });
+
+    test('configureDefault overrides it for new vaults', () {
+      const stronger = KdfParams(memoryKiB: 65536, iterations: 3, parallelism: 2);
+      KdfParams.configureDefault(stronger);
+      expect(KdfParams.deploymentDefault, stronger);
+      // The fixed OWASP floor itself never moves.
+      expect(KdfParams.owaspDefault.memoryKiB, 19456);
+    });
+
+    test('resetForTesting restores the OWASP floor as the deployment default', () {
+      KdfParams.configureDefault(
+        const KdfParams(memoryKiB: 65536, iterations: 3, parallelism: 2),
+      );
+      KdfParams.resetForTesting();
+      expect(KdfParams.deploymentDefault, KdfParams.owaspDefault);
+    });
+  });
+
   group('AES-256-GCM encryption', () {
     late MasterKey key;
 

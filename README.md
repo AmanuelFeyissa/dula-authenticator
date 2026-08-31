@@ -12,7 +12,8 @@ the full history and reasoning behind every architectural decision made along th
 DulaAuth is designed around four target deployment scenarios, not just "a phone app":
 
 - **Any organization** — no company name, logo, or internal system is hardcoded; see
-  `docs/BRANDING.md` (coming in a later phase) for how to re-skin it for your own organization.
+  `docs/BRANDING.md` for how to re-skin it for your own organization, and `docs/CONFIGURATION.md`
+  for deployer-configurable security policy (PIN length, lockout, Argon2id cost, and more).
 - **Air-gapped networks** — zero telemetry, ever, by policy (see `docs/adr/0007-air-gapped-operability.md`).
 - **Offices that ban personal phones / restrict cameras** — every platform has a working
   camera-free enrollment path: manual secret entry, QR image import, and clipboard paste

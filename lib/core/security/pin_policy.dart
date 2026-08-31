@@ -5,7 +5,29 @@
 /// regardless of how it is hashed (see ADR-0010 and ADR-0011), so rejecting the
 /// predictable values attackers try first is a meaningful part of the defence.
 class PinPolicy {
-  static const int pinLength = 6;
+  /// Required PIN length. Deployer-configurable via
+  /// `assets/config/deployment_config.json`'s `security.pinLength` (see
+  /// docs/adr/0016-deployment-configuration.md) through [configure] — a
+  /// mutable static rather than a constructor parameter because this class
+  /// is a stateless utility called directly from UI code with no existing
+  /// dependency-injection path.
+  ///
+  /// Changing this away from the default (6) forfeits [_commonPins] and the
+  /// sequential/repeating-pattern checks below: they are curated
+  /// specifically for 6-digit PINs, and [validate] skips them entirely at
+  /// any other length rather than risk misapplying them.
+  static int pinLength = 6;
+
+  /// Sets [pinLength]. Call once at startup, before any PIN is validated.
+  static void configure({required int pinLength}) {
+    PinPolicy.pinLength = pinLength;
+  }
+
+  /// Restores the default length. Test-only — call in `tearDown` after any
+  /// test that calls [configure].
+  static void resetForTesting() {
+    pinLength = 6;
+  }
 
   // ---------------------------------------------------------------------------
   // Common 6-digit PIN blocklist.
@@ -76,18 +98,25 @@ class PinPolicy {
 
   /// Returns `null` if [pin] satisfies policy, or a human-readable reason.
   static String? validate(String pin) {
-    if (pin.length != pinLength) return 'PIN must be exactly 6 digits.';
+    if (pin.length != pinLength) {
+      return 'PIN must be exactly $pinLength digits.';
+    }
 
-    if (!RegExp(r'^\d{6}$').hasMatch(pin)) {
+    if (!RegExp(r'^\d+$').hasMatch(pin)) {
       return 'PIN must contain digits only.';
     }
 
-    if (_commonPins.contains(pin)) {
-      return 'This PIN is too common. Please choose a less predictable one.';
+    if (pin.split('').every((c) => c == pin[0])) {
+      return 'PIN cannot use the same digit repeated $pinLength times.';
     }
 
-    if (pin.split('').every((c) => c == pin[0])) {
-      return 'PIN cannot use the same digit repeated 6 times.';
+    // The remaining checks are curated for 6-digit PINs (see [pinLength]'s
+    // doc comment) — some of them assume a fixed length when slicing the
+    // string into pairs, so they only run at the default length.
+    if (pinLength != 6) return null;
+
+    if (_commonPins.contains(pin)) {
+      return 'This PIN is too common. Please choose a less predictable one.';
     }
 
     if (_isFullyAscending(pin)) {

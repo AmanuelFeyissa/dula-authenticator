@@ -1,0 +1,27 @@
+{
+  "security": {
+    "pinLength": 6,
+    "passphraseMinLength": 12,
+    "passphraseRecommendedLength": 15,
+    "passphraseMaxLength": 256,
+    "argon2MemoryKiB": 19456,
+    "argon2Iterations": 2,
+    "argon2Parallelism": 1,
+    "lockoutSteps": [
+      { "attempts": 3, "seconds": 30 },
+      { "attempts": 5, "seconds": 300 },
+      { "attempts": 10, "seconds": 3600 }
+    ],
+    "defaultAutoLock": "thirtySeconds",
+    "credentialRotationDefaultDays": 90,
+    "credentialRotationMinDays": 1,
+    "credentialRotationMaxDays": 3650,
+    "credentialRotationOptionsDays": [30, 60, 90, 180, 365]
+  },
+  "backup": {
+    "fileNamePrefix": null
+  },
+  "ui": {
+    "copiedToClipboardSnackbarSeconds": 1
+  }
+}

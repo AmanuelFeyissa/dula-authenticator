@@ -5,21 +5,21 @@ void main() {
   group('defaults', () {
     test('locks after thirty seconds in the background', () {
       expect(
-        const AppSettings().autoLock,
+        AppSettings().autoLock,
         AutoLockDelay.thirtySeconds,
       );
     });
 
     test('leaves biometric unlock off until the user opts in', () {
-      expect(const AppSettings().biometricUnlockEnabled, isFalse);
+      expect(AppSettings().biometricUnlockEnabled, isFalse);
     });
 
     test('leaves forced credential rotation off', () {
       // NIST SP 800-63B advises against mandatory periodic rotation of
       // user-chosen secrets; it stays available for deployments whose
       // compliance regime demands it, but nobody gets it by default.
-      expect(const AppSettings().credentialRotationEnabled, isFalse);
-      expect(const AppSettings().credentialRotationDays, 90);
+      expect(AppSettings().credentialRotationEnabled, isFalse);
+      expect(AppSettings().credentialRotationDays, 90);
     });
   });
 
@@ -45,7 +45,7 @@ void main() {
 
   group('serialization', () {
     test('round-trips every field', () {
-      const settings = AppSettings(
+      final settings = AppSettings(
         autoLock: AutoLockDelay.fiveMinutes,
         biometricUnlockEnabled: true,
         credentialRotationEnabled: true,
@@ -60,11 +60,11 @@ void main() {
       // unparseable value must not be able to produce it.
       final restored = AppSettings.fromMap({'autoLock': 'whenever'});
 
-      expect(restored.autoLock, const AppSettings().autoLock);
+      expect(restored.autoLock, AppSettings().autoLock);
     });
 
     test('an empty map yields the defaults', () {
-      expect(AppSettings.fromMap(const {}), const AppSettings());
+      expect(AppSettings.fromMap(const {}), AppSettings());
     });
 
     test('a nonsensical rotation period is clamped, not honoured', () {
@@ -83,7 +83,7 @@ void main() {
     test('never expires while rotation is disabled', () {
       // The regression this guards: rotation was documented as opt-in but
       // applied to every user, so a year-old PIN forced a rotation prompt.
-      const settings = AppSettings();
+      final settings = AppSettings();
 
       expect(
         settings.isCredentialExpired(setOn, now: muchLater),
@@ -92,13 +92,13 @@ void main() {
     });
 
     test('expires once the period has elapsed and rotation is enabled', () {
-      const settings = AppSettings(credentialRotationEnabled: true);
+      final settings = AppSettings(credentialRotationEnabled: true);
 
       expect(settings.isCredentialExpired(setOn, now: muchLater), isTrue);
     });
 
     test('does not expire before the period has elapsed', () {
-      const settings = AppSettings(credentialRotationEnabled: true);
+      final settings = AppSettings(credentialRotationEnabled: true);
 
       expect(
         settings.isCredentialExpired(setOn, now: DateTime(2026, 2, 1)),
@@ -107,9 +107,47 @@ void main() {
     });
 
     test('treats an unknown set date as not expired', () {
-      const settings = AppSettings(credentialRotationEnabled: true);
+      final settings = AppSettings(credentialRotationEnabled: true);
 
       expect(settings.isCredentialExpired(null, now: muchLater), isFalse);
+    });
+  });
+
+  group('AppSettings.configureDefaults', () {
+    tearDown(AppSettings.resetDefaultsForTesting);
+
+    test('changes the default auto-lock delay', () {
+      AppSettings.configureDefaults(autoLock: AutoLockDelay.immediate);
+      expect(AppSettings().autoLock, AutoLockDelay.immediate);
+    });
+
+    test('changes the default rotation period and its bounds', () {
+      AppSettings.configureDefaults(
+        rotationDays: 60,
+        minRotationDays: 7,
+        maxRotationDays: 365,
+      );
+      expect(AppSettings().credentialRotationDays, 60);
+      expect(
+        AppSettings.fromMap(const {'credentialRotationDays': 1})
+            .credentialRotationDays,
+        7,
+      );
+      expect(
+        AppSettings.fromMap(const {'credentialRotationDays': 9999})
+            .credentialRotationDays,
+        365,
+      );
+    });
+
+    test('resetDefaultsForTesting restores the historical defaults', () {
+      AppSettings.configureDefaults(
+        autoLock: AutoLockDelay.immediate,
+        rotationDays: 60,
+      );
+      AppSettings.resetDefaultsForTesting();
+      expect(AppSettings.defaultAutoLock, AutoLockDelay.thirtySeconds);
+      expect(AppSettings.defaultRotationDays, 90);
     });
   });
 }

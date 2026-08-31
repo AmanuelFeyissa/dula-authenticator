@@ -38,6 +38,10 @@ below) before proceeding — do not silently narrow scope back to a single-compa
     input** (a scanned code or an imported file) — see docs/adr/0013-backup-export-and-import.md.
   - `lib/core/repositories/account_repository.dart`, `lib/features/auth/**` — secret storage,
     credential policy/lockout, biometrics.
+  - `lib/core/config/deployment_config.dart` — deployer-configurable security policy (PIN length,
+    passphrase rules, Argon2id cost, lockout backoff, auto-lock/rotation defaults). See
+    docs/adr/0016-deployment-configuration.md and docs/CONFIGURATION.md. Changing a field here
+    changes runtime security behavior for every deployment that sets it — review accordingly.
 - **The security model is documented in `docs/SECURITY_MODEL.md`** — threat model, the honest
   limits of biometric unlock, and the per-platform capability table. Keep it in sync with any
   change that alters a guarantee (required by ADR-0005 and ADR-0011).
@@ -74,6 +78,7 @@ Current ADR index (see each file for full context/decision/consequences):
 | [0013](docs/adr/0013-backup-export-and-import.md) | Local encrypted backup (passphrase-protected); import from Google Authenticator/Aegis/2FAS; no cloud sync |
 | [0014](docs/adr/0014-remove-directory-authentication.md) | Enterprise directory auth removed entirely (supersedes 0003) |
 | [0015](docs/adr/0015-account-management.md) | Tags (not a single folder), favorites as a filter, no explicit sort field, corrupt-account isolation |
+| [0016](docs/adr/0016-deployment-configuration.md) | `assets/config/deployment_config.json` centralizes security-policy/product hardcodes (PIN length, Argon2id cost, lockout, auto-lock/rotation defaults, backup naming), separate from `branding.json` |
 
 ## Attribution — hard constraint
 

@@ -1,3 +1,5 @@
+import 'package:dula_auth/core/security/pin_policy.dart';
+
 /// The knowledge factor protecting the vault.
 ///
 /// Chosen by the user at registration and recorded in the vault metadata, so
@@ -14,24 +16,27 @@
 /// Added for the user instruction "go ahead on phase 3".
 enum CredentialKind {
   pin(
-    label: '6-digit PIN',
     explanation: 'Quick to enter. Best when you unlock many times a day and '
         'your device is yours alone.',
   ),
   passphrase(
-    label: 'Passphrase',
-    explanation: 'Harder to guess than six digits. Best on a desktop, or when '
-        'these codes protect high-value accounts.',
+    explanation: 'Harder to guess than a short PIN. Best on a desktop, or '
+        'when these codes protect high-value accounts.',
   );
 
-  const CredentialKind({required this.label, required this.explanation});
-
-  /// Short name for the choice, shown on the setup screen.
-  final String label;
+  const CredentialKind({required this.explanation});
 
   /// One honest line about the trade-off. ADR-0011 requires the choice be
   /// presented plainly, with neither option framed as a punishment.
   final String explanation;
+
+  /// Short name for the choice, shown on the setup screen. [pin]'s label
+  /// reflects the deployer-configured `PinPolicy.pinLength` (see
+  /// docs/adr/0016-deployment-configuration.md) rather than a hardcoded "6".
+  String get label => switch (this) {
+        CredentialKind.pin => '${PinPolicy.pinLength}-digit PIN',
+        CredentialKind.passphrase => 'Passphrase',
+      };
 
   /// Reads a stored kind.
   ///

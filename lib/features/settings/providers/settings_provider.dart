@@ -28,7 +28,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   /// await this first.
   late final Future<void> ready;
 
-  SettingsNotifier(this._repository) : super(const AppSettings()) {
+  SettingsNotifier(this._repository) : super(AppSettings()) {
     ready = _load();
   }
 
@@ -64,7 +64,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
   /// Returns every setting to its default. Used by the reset-app flow.
   Future<void> reset() async {
-    state = const AppSettings();
+    state = AppSettings();
     await _repository.clear();
   }
 }

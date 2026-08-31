@@ -6,7 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:dula_auth/core/app_version.dart';
 import 'package:dula_auth/core/branding/branding_config.dart';
+import 'package:dula_auth/core/config/deployment_config.dart';
 import 'package:dula_auth/core/crypto/vault_crypto.dart';
 import 'package:dula_auth/core/repositories/account_repository.dart';
 import 'package:dula_auth/core/models/otp_account.dart';
@@ -71,6 +74,8 @@ void main() {
     _StubBiometrics biometrics = const _StubBiometrics(),
   }) async {
     final branding = await BrandingConfig.load();
+    final deployment = await DeploymentConfig.load();
+    final packageInfo = await PackageInfo.fromPlatform();
     await tester.pumpWidget(
       ProviderScope(
         // A fresh key forces a new element, and so a new provider container.
@@ -80,6 +85,8 @@ void main() {
         key: UniqueKey(),
         overrides: [
           brandingConfigProvider.overrideWithValue(branding),
+          deploymentConfigProvider.overrideWithValue(deployment),
+          packageInfoProvider.overrideWithValue(packageInfo),
           authRepositoryProvider.overrideWithValue(
             AuthRepository(store: store, vault: vault, biometrics: biometrics),
           ),

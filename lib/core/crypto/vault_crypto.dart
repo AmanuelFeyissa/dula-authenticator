@@ -21,9 +21,31 @@ class KdfParams {
   });
 
   /// OWASP Password Storage Cheat Sheet minimum for Argon2id:
-  /// m = 19456 KiB (19 MiB), t = 2, p = 1.
+  /// m = 19456 KiB (19 MiB), t = 2, p = 1. Fixed — this is the security
+  /// floor, not a deployer-adjustable value. New vaults use
+  /// [deploymentDefault] instead, which starts equal to this.
   static const KdfParams owaspDefault =
       KdfParams(memoryKiB: 19456, iterations: 2, parallelism: 1);
+
+  /// Parameters used for newly created vaults. Deployer-configurable via
+  /// `assets/config/deployment_config.json`'s `security.argon2*` fields (see
+  /// docs/adr/0016-deployment-configuration.md) through [configureDefault].
+  /// A mutable static — `VaultService` and `BackupService.export` read it as
+  /// their default parameter value's fallback, since a mutable static cannot
+  /// itself be a `const` default-parameter literal.
+  static KdfParams deploymentDefault = owaspDefault;
+
+  /// Sets [deploymentDefault]. Call once at startup, before any vault is
+  /// created.
+  static void configureDefault(KdfParams params) {
+    deploymentDefault = params;
+  }
+
+  /// Restores [deploymentDefault] to [owaspDefault]. Test-only — call in
+  /// `tearDown` after any test that calls [configureDefault].
+  static void resetForTesting() {
+    deploymentDefault = owaspDefault;
+  }
 
   Map<String, dynamic> toMap() => {
         'alg': 'argon2id',

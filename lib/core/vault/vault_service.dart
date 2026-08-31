@@ -34,8 +34,8 @@ class VaultService {
   final SecretStore _store;
   final KdfParams _params;
 
-  VaultService(this._store, {KdfParams params = KdfParams.owaspDefault})
-      : _params = params;
+  VaultService(this._store, {KdfParams? params})
+      : _params = params ?? KdfParams.deploymentDefault;
 
   /// Whether a credential has been set up.
   Future<bool> isInitialized() async {

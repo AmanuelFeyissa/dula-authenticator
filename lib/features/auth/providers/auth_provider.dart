@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dula_auth/core/crypto/vault_crypto.dart';
 import 'package:dula_auth/core/security/credential_kind.dart';
 import 'package:dula_auth/core/security/credential_policy.dart';
+import 'package:dula_auth/core/security/lockout_policy.dart';
 import 'package:dula_auth/core/settings/app_settings.dart';
 import 'package:dula_auth/features/auth/repositories/auth_repository.dart';
 import 'package:dula_auth/features/home/providers/home_provider.dart';
@@ -214,12 +215,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _repository.setFailedAttempts(newAttempts);
 
     DateTime? lockoutUntil;
-    if (newAttempts >= 10) {
-      lockoutUntil = DateTime.now().add(const Duration(hours: 1));
-    } else if (newAttempts >= 5) {
-      lockoutUntil = DateTime.now().add(const Duration(minutes: 5));
-    } else if (newAttempts >= 3) {
-      lockoutUntil = DateTime.now().add(const Duration(seconds: 30));
+    final lockoutDuration = LockoutPolicy.durationFor(newAttempts);
+    if (lockoutDuration != null) {
+      lockoutUntil = DateTime.now().add(lockoutDuration);
     }
 
     if (lockoutUntil != null) {

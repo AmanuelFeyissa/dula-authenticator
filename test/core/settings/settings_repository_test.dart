@@ -14,11 +14,11 @@ void main() {
   });
 
   test('a fresh install loads the defaults', () async {
-    expect(await repository.load(), const AppSettings());
+    expect(await repository.load(), AppSettings());
   });
 
   test('saved settings survive a reload', () async {
-    const chosen = AppSettings(
+    final chosen = AppSettings(
       autoLock: AutoLockDelay.never,
       biometricUnlockEnabled: true,
       credentialRotationEnabled: true,
@@ -38,7 +38,7 @@ void main() {
     final loaded = await SettingsRepository().load();
 
     expect(loaded.biometricUnlockEnabled, isTrue);
-    expect(loaded.autoLock, const AppSettings().autoLock);
+    expect(loaded.autoLock, AppSettings().autoLock);
   });
 
   test('a value stored with the wrong type does not crash the app', () async {
@@ -51,13 +51,13 @@ void main() {
 
     final loaded = await SettingsRepository().load();
 
-    expect(loaded.autoLock, const AppSettings().autoLock);
+    expect(loaded.autoLock, AppSettings().autoLock);
     expect(loaded.credentialRotationDays, AppSettings.defaultRotationDays);
   });
 
   test('turning a setting off persists the off state', () async {
-    await repository.save(const AppSettings(biometricUnlockEnabled: true));
-    await repository.save(const AppSettings(biometricUnlockEnabled: false));
+    await repository.save(AppSettings(biometricUnlockEnabled: true));
+    await repository.save(AppSettings(biometricUnlockEnabled: false));
 
     expect((await SettingsRepository().load()).biometricUnlockEnabled, isFalse);
   });
