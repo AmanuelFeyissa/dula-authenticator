@@ -76,7 +76,10 @@ void main() {
     expect(loaded.single.generateCode(time: when), expected);
   });
 
-  test('surfaces tampering instead of returning a wrong secret', () async {
+  test('surfaces tampering as a per-account error, not a wrong secret',
+      () async {
+    // A tampered account must never be silently readable as garbage — but it
+    // also must not take every other account down with it (ADR-0015 §7).
     final key = await vault.initialize('correct horse battery');
     await repo.addAccount(account('1', 'JBSWY3DPEHPK3PXP'), masterKey: key);
 
@@ -88,10 +91,37 @@ void main() {
     accounts[0]['secret'] = base64.encode(sealed);
     await store.write(VaultService.accountsKey, jsonEncode(accounts));
 
-    expect(
-      () => repo.getAccounts(masterKey: key),
-      throwsA(isA<VaultDecryptionException>()),
-    );
+    final loaded = await repo.getAccounts(masterKey: key);
+
+    expect(loaded.single.loadError, isNotNull);
+    expect(loaded.single.secret, isNot('JBSWY3DPEHPK3PXP'),
+        reason: 'a corrupted secret must never be reported as the real one');
+  });
+
+  test('one corrupt account does not block the others from loading',
+      () async {
+    final key = await vault.initialize('correct horse battery');
+    await repo.addAccount(account('1', 'JBSWY3DPEHPK3PXP'), masterKey: key);
+    await repo.addAccount(account('2', 'KRSXG5CTMVRXEZLU'), masterKey: key);
+    await repo.addAccount(account('3', 'JBSWY3DPEHPK3PXP'), masterKey: key);
+
+    final accounts =
+        jsonDecode(await store.read(VaultService.accountsKey) as String)
+            as List;
+    final middle = accounts[1] as Map<String, dynamic>;
+    final sealed = base64.decode(middle['secret'] as String);
+    sealed[sealed.length ~/ 2] ^= 0x01;
+    middle['secret'] = base64.encode(sealed);
+    await store.write(VaultService.accountsKey, jsonEncode(accounts));
+
+    final loaded = await repo.getAccounts(masterKey: key);
+
+    expect(loaded, hasLength(3));
+    expect(loaded[0].loadError, isNull);
+    expect(loaded[0].secret, 'JBSWY3DPEHPK3PXP');
+    expect(loaded[1].loadError, isNotNull);
+    expect(loaded[2].loadError, isNull);
+    expect(loaded[2].secret, 'JBSWY3DPEHPK3PXP');
   });
 
   test('deletes an account without disturbing the others', () async {
@@ -104,6 +134,60 @@ void main() {
 
     expect(loaded.single.id, '2');
     expect(loaded.single.secret, 'KRSXG5CTMVRXEZLU');
+  });
+
+  group('reordering', () {
+    test('persists a new order, no explicit sort field involved', () async {
+      final key = await vault.initialize('correct horse battery');
+      await repo.addAccount(account('1', 'JBSWY3DPEHPK3PXP'), masterKey: key);
+      await repo.addAccount(account('2', 'KRSXG5CTMVRXEZLU'), masterKey: key);
+      await repo.addAccount(account('3', 'JBSWY3DPEHPK3PXP'), masterKey: key);
+
+      final reordered =
+          await repo.reorderAccounts(['3', '1', '2'], masterKey: key);
+      expect(reordered, isTrue);
+
+      final loaded = await repo.getAccounts(masterKey: key);
+      expect(loaded.map((a) => a.id), ['3', '1', '2']);
+    });
+
+    test('keeps every secret readable after a reorder', () async {
+      final key = await vault.initialize('correct horse battery');
+      await repo.addAccount(account('1', 'JBSWY3DPEHPK3PXP'), masterKey: key);
+      await repo.addAccount(account('2', 'KRSXG5CTMVRXEZLU'), masterKey: key);
+
+      await repo.reorderAccounts(['2', '1'], masterKey: key);
+      final loaded = await repo.getAccounts(masterKey: key);
+
+      expect(loaded.firstWhere((a) => a.id == '1').secret, 'JBSWY3DPEHPK3PXP');
+      expect(loaded.firstWhere((a) => a.id == '2').secret, 'KRSXG5CTMVRXEZLU');
+    });
+
+    test('refuses an order that does not name every stored account',
+        () async {
+      final key = await vault.initialize('correct horse battery');
+      await repo.addAccount(account('1', 'JBSWY3DPEHPK3PXP'), masterKey: key);
+      await repo.addAccount(account('2', 'KRSXG5CTMVRXEZLU'), masterKey: key);
+
+      // Missing '2' entirely — applying this would silently drop an account.
+      final reordered = await repo.reorderAccounts(['1'], masterKey: key);
+
+      expect(reordered, isFalse);
+      final loaded = await repo.getAccounts(masterKey: key);
+      expect(loaded, hasLength(2),
+          reason: 'a rejected reorder must not lose an account');
+    });
+
+    test('ignores an id that does not exist rather than inventing an entry',
+        () async {
+      final key = await vault.initialize('correct horse battery');
+      await repo.addAccount(account('1', 'JBSWY3DPEHPK3PXP'), masterKey: key);
+
+      final reordered =
+          await repo.reorderAccounts(['1', 'does-not-exist'], masterKey: key);
+
+      expect(reordered, isFalse);
+    });
   });
 
   test('survives a lock and unlock cycle', () async {

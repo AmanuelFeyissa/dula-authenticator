@@ -360,10 +360,10 @@ void main() {
       final otherVault = VaultService(InMemorySecretStore({}));
       final wrongKey = await otherVault.initialize(otherPin);
 
-      expect(
-        () => accounts.getAccounts(masterKey: wrongKey),
-        throwsA(isA<VaultDecryptionException>()),
-      );
+      final loaded = await accounts.getAccounts(masterKey: wrongKey);
+
+      expect(loaded.single.loadError, isNotNull);
+      expect(loaded.single.secret, isNot('JBSWY3DPEHPK3PXP'));
     });
 
     testWidgets('unlock at production KDF cost stays responsive',
@@ -461,6 +461,256 @@ void main() {
       final stored = (await accounts.getAccounts(masterKey: key)).single;
       expect(stored.counter, 1,
           reason: 'advancing must persist the new counter');
+    });
+  });
+
+  group('account management', () {
+    testWidgets('search narrows the list to matching accounts',
+        (tester) async {
+      final key = await vault.initialize(pin, kind: CredentialKind.pin);
+      await accounts.addAccount(
+        OtpAccount(
+            id: '1',
+            issuer: 'GitHub',
+            accountName: 'dev@example.com',
+            secret: 'JBSWY3DPEHPK3PXP'),
+        masterKey: key,
+      );
+      await accounts.addAccount(
+        OtpAccount(
+            id: '2',
+            issuer: 'AWS',
+            accountName: 'ops@example.com',
+            secret: 'KRSXG5CTMVRXEZLU'),
+        masterKey: key,
+      );
+
+      await pumpApp(tester);
+      await enterPin(tester, pin);
+
+      expect(find.text('GitHub'), findsOneWidget);
+      expect(find.text('AWS'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField).first, 'git');
+      await tester.pumpAndSettle();
+
+      expect(find.text('GitHub'), findsOneWidget);
+      expect(find.text('AWS'), findsNothing);
+    });
+
+    testWidgets('toggling favorite persists and filters via the chip',
+        (tester) async {
+      final key = await vault.initialize(pin, kind: CredentialKind.pin);
+      await accounts.addAccount(
+        OtpAccount(
+            id: '1',
+            issuer: 'GitHub',
+            accountName: 'dev@example.com',
+            secret: 'JBSWY3DPEHPK3PXP'),
+        masterKey: key,
+      );
+      await accounts.addAccount(
+        OtpAccount(
+            id: '2',
+            issuer: 'AWS',
+            accountName: 'ops@example.com',
+            secret: 'KRSXG5CTMVRXEZLU'),
+        masterKey: key,
+      );
+
+      await pumpApp(tester);
+      await enterPin(tester, pin);
+
+      await tester.tap(find.byIcon(Icons.more_vert).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add to favorites'));
+      await tester.pumpAndSettle();
+
+      final stored = await accounts.getAccounts(masterKey: key);
+      expect(stored.firstWhere((a) => a.issuer == 'GitHub').isFavorite, isTrue);
+
+      await tester.tap(find.text('★ Favorites'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('GitHub'), findsOneWidget);
+      expect(find.text('AWS'), findsNothing);
+    });
+
+    testWidgets('adding a tag persists and appears as a filter chip',
+        (tester) async {
+      final key = await vault.initialize(pin, kind: CredentialKind.pin);
+      await accounts.addAccount(
+        OtpAccount(
+            id: '1',
+            issuer: 'GitHub',
+            accountName: 'dev@example.com',
+            secret: 'JBSWY3DPEHPK3PXP'),
+        masterKey: key,
+      );
+
+      await pumpApp(tester);
+      await enterPin(tester, pin);
+
+      await tester.tap(find.byIcon(Icons.more_vert).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Manage tags'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).last, 'work');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final stored =
+          (await accounts.getAccounts(masterKey: key)).single;
+      expect(stored.tags, ['work']);
+      expect(find.widgetWithText(FilterChip, 'work'), findsOneWidget);
+    });
+
+    testWidgets('editing an account persists the change without a new id',
+        (tester) async {
+      final key = await vault.initialize(pin, kind: CredentialKind.pin);
+      await accounts.addAccount(
+        OtpAccount(
+            id: '1',
+            issuer: 'GitHub',
+            accountName: 'dev@example.com',
+            secret: 'JBSWY3DPEHPK3PXP'),
+        masterKey: key,
+      );
+
+      await pumpApp(tester);
+      await enterPin(tester, pin);
+
+      await tester.tap(find.byIcon(Icons.more_vert).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Edit'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit Account'), findsOneWidget);
+      expect(find.text('Scan QR Code with Camera'), findsNothing,
+          reason: 'there is nothing to scan when editing text fields');
+
+      final issuerField = find.widgetWithText(TextFormField,
+          'Issuer (e.g. Google, GitHub)');
+      await tester.enterText(issuerField, 'GitHub Enterprise');
+      await tester.tap(find.text('SAVE CHANGES'));
+      await tester.pumpAndSettle();
+
+      final stored =
+          (await accounts.getAccounts(masterKey: key)).single;
+      expect(stored.id, '1', reason: 'editing must not create a new account');
+      expect(stored.issuer, 'GitHub Enterprise');
+      expect(stored.secret, 'JBSWY3DPEHPK3PXP');
+    });
+
+    testWidgets('a corrupted account is isolated, not blocking the list',
+        (tester) async {
+      final key = await vault.initialize(pin, kind: CredentialKind.pin);
+      await accounts.addAccount(
+        OtpAccount(
+            id: '1',
+            issuer: 'GitHub',
+            accountName: 'dev@example.com',
+            secret: 'JBSWY3DPEHPK3PXP'),
+        masterKey: key,
+      );
+      await accounts.addAccount(
+        OtpAccount(
+            id: '2',
+            issuer: 'AWS',
+            accountName: 'ops@example.com',
+            secret: 'KRSXG5CTMVRXEZLU'),
+        masterKey: key,
+      );
+
+      // Corrupt the second account's ciphertext directly in storage.
+      final raw = jsonDecode(await store.read(VaultService.accountsKey) as String)
+          as List;
+      final entry = raw.firstWhere((e) => e['id'] == '2') as Map<String, dynamic>;
+      final sealed = base64.decode(entry['secret'] as String);
+      sealed[sealed.length ~/ 2] ^= 0x01;
+      entry['secret'] = base64.encode(sealed);
+      await store.write(VaultService.accountsKey, jsonEncode(raw));
+
+      await pumpApp(tester);
+      await enterPin(tester, pin);
+
+      // The healthy account still renders normally...
+      expect(find.text('GitHub'), findsOneWidget);
+      final codeFinder = find.byWidgetPredicate(
+        (w) => w is Text && w.data != null && RegExp(r'^\d{3} \d{3}$').hasMatch(w.data!),
+      );
+      expect(codeFinder, findsOneWidget);
+
+      // ...and the corrupted one is clearly marked rather than crashing the
+      // whole screen.
+      expect(find.text('AWS'), findsOneWidget);
+      expect(find.textContaining('Could not read'), findsOneWidget);
+
+      // Swiping it away removes only that account, once confirmed.
+      await tester.drag(find.text('AWS'), const Offset(-500, 0));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('DELETE'));
+      await tester.pumpAndSettle();
+
+      // The corrupted card is gone and only the healthy account remains —
+      // the user-visible proof the delete worked.
+      expect(find.text('AWS'), findsNothing);
+      expect(find.text('GitHub'), findsOneWidget);
+
+      // Re-reading storage through a second, independent AccountRepository
+      // races the native secure-storage write on Windows if checked
+      // immediately; a brief real wait lets that write flush before this
+      // out-of-band check, same as the production write path already does.
+      await tester.pump(const Duration(seconds: 1));
+      final remaining = await accounts.getAccounts(masterKey: key);
+      expect(remaining.single.id, '1');
+    });
+
+    testWidgets('drag-reorder persists the new order', (tester) async {
+      final key = await vault.initialize(pin, kind: CredentialKind.pin);
+      await accounts.addAccount(
+        OtpAccount(
+            id: '1',
+            issuer: 'One',
+            accountName: 'a@example.com',
+            secret: 'JBSWY3DPEHPK3PXP'),
+        masterKey: key,
+      );
+      await accounts.addAccount(
+        OtpAccount(
+            id: '2',
+            issuer: 'Two',
+            accountName: 'b@example.com',
+            secret: 'KRSXG5CTMVRXEZLU'),
+        masterKey: key,
+      );
+
+      await pumpApp(tester);
+      await enterPin(tester, pin);
+
+      expect(find.byType(ReorderableListView), findsOneWidget,
+          reason: 'the unfiltered list must be manually reorderable');
+
+      // A single tester.drag() does not reliably register as a reorder
+      // gesture on ReorderableListView — it needs a held pointer with
+      // intermediate moves, the same pattern Flutter's own reorderable-list
+      // tests use, rather than one instantaneous drag.
+      final handle = find.byIcon(Icons.drag_handle);
+      expect(handle, findsWidgets);
+      final gesture = await tester.startGesture(tester.getCenter(handle.first));
+      await tester.pump(const Duration(milliseconds: 400));
+      await gesture.moveBy(const Offset(0, 40));
+      await tester.pump(const Duration(milliseconds: 50));
+      await gesture.moveBy(const Offset(0, 80));
+      await tester.pump(const Duration(milliseconds: 50));
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      final stored = await accounts.getAccounts(masterKey: key);
+      expect(stored.map((a) => a.id), ['2', '1']);
     });
   });
 

@@ -5,23 +5,6 @@ import 'package:dula_auth/core/models/otp_account.dart';
 import 'package:dula_auth/core/vault/secret_store.dart';
 import 'package:dula_auth/core/vault/vault_service.dart';
 
-/// Raised when a stored secret cannot be decrypted.
-///
-/// Surfaced rather than swallowed: a secret that fails authentication has been
-/// tampered with or was written under a different key, and generating codes
-/// from a silently-empty secret would produce plausible-looking but wrong
-/// output — the worst failure mode for an authenticator.
-class VaultDecryptionException implements Exception {
-  final String accountId;
-
-  const VaultDecryptionException(this.accountId);
-
-  @override
-  String toString() =>
-      'Could not decrypt the stored secret for account "$accountId". '
-      'The vault may be corrupted or was written by a different installation.';
-}
-
 class AccountRepository {
   final SecretStore _store;
   final VaultService _vault;
@@ -34,7 +17,12 @@ class AccountRepository {
 
   /// Loads all accounts, decrypting secrets when [masterKey] is supplied.
   ///
-  /// Throws [VaultDecryptionException] if a secret cannot be decrypted.
+  /// An account whose secret fails to decrypt — tampered ciphertext, or a key
+  /// from a different vault — is returned with [OtpAccount.loadError] set
+  /// rather than aborting the whole load: one corrupted record must not make
+  /// every other account unreachable too (docs/adr/0015-account-management.md
+  /// §7). Its `secret` is left as the undecrypted ciphertext, which callers
+  /// must never treat as usable — check `loadError` first.
   Future<List<OtpAccount>> getAccounts({MasterKey? masterKey}) async {
     final raw = await _store.read(_accountsKey);
     if (raw == null || raw.isEmpty) return [];
@@ -54,7 +42,12 @@ class AccountRepository {
       }
       final plaintext = await _vault.decryptSecret(account.secret, masterKey);
       if (plaintext == null) {
-        throw VaultDecryptionException(account.id);
+        result.add(account.copyWith(
+          loadError: 'Could not decrypt this account\'s secret. The vault '
+              'may be corrupted, or this account was written by a different '
+              'installation.',
+        ));
+        continue;
       }
       result.add(account.copyWith(secret: plaintext));
     }
@@ -116,6 +109,34 @@ class AccountRepository {
     if (accounts.length == initialLength) return false;
 
     await _saveAccounts(accounts, masterKey: masterKey);
+    return true;
+  }
+
+  /// Rewrites the persisted account order to [orderedIds].
+  ///
+  /// There is no separate sort-order field (ADR-0015 §3): the array position
+  /// in storage *is* the order, so reordering is just rewriting that array.
+  /// Returns false, changing nothing, unless [orderedIds] names every
+  /// currently-stored account exactly once — a partial list would either
+  /// silently drop an account or leave its position undefined, and neither
+  /// is an acceptable outcome of a drag gesture.
+  Future<bool> reorderAccounts(
+    List<String> orderedIds, {
+    MasterKey? masterKey,
+  }) async {
+    final accounts = await getAccounts(masterKey: masterKey);
+    if (orderedIds.length != accounts.length) return false;
+    if (orderedIds.toSet().length != orderedIds.length) return false;
+
+    final byId = {for (final a in accounts) a.id: a};
+    final reordered = <OtpAccount>[];
+    for (final id in orderedIds) {
+      final match = byId[id];
+      if (match == null) return false;
+      reordered.add(match);
+    }
+
+    await _saveAccounts(reordered, masterKey: masterKey);
     return true;
   }
 

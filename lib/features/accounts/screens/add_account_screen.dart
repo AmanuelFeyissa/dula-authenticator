@@ -16,7 +16,14 @@ import 'package:zxing2/qrcode.dart';
 import 'package:pasteboard/pasteboard.dart';
 
 class AddAccountScreen extends ConsumerStatefulWidget {
-  const AddAccountScreen({super.key});
+  /// When supplied, the screen edits this account instead of creating a new
+  /// one: every field is pre-filled and saving calls `updateAccount` rather
+  /// than `addAccount`. Reusing this form rather than a second one keeps a
+  /// single place that has to track `OtpUri`'s parameter set — see
+  /// docs/adr/0015-account-management.md §6.
+  final OtpAccount? existing;
+
+  const AddAccountScreen({super.key, this.existing});
 
   @override
   ConsumerState<AddAccountScreen> createState() => _AddAccountScreenState();
@@ -38,6 +45,28 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   bool _isScanning = false;
   bool _isDragging = false;
   bool _isDecoding = false;
+
+  bool get _isEditing => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existing;
+    if (existing == null) return;
+
+    _issuerController.text = existing.issuer;
+    _accountNameController.text = existing.accountName;
+    _secretController.text = existing.secret;
+    _type = existing.type;
+    _algorithm = existing.algorithm;
+    _digitsController.text = '${existing.digits}';
+    _periodController.text = '${existing.period}';
+    _counterController.text = '${existing.counter}';
+    _showAdvanced = existing.digits != 6 ||
+        existing.period != 30 ||
+        existing.algorithm != OtpAlgorithm.sha1 ||
+        existing.type != OtpType.totp;
+  }
 
   @override
   void dispose() {
@@ -295,8 +324,9 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       return;
     }
 
+    final existing = widget.existing;
     final account = OtpAccount(
-      id: _newId(),
+      id: existing?.id ?? _newId(),
       issuer: _issuerController.text.trim(),
       accountName: _accountNameController.text.trim(),
       secret: secret,
@@ -307,15 +337,20 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       period: int.tryParse(_periodController.text) ?? 30,
       algorithm: _algorithm,
       counter: int.tryParse(_counterController.text) ?? 0,
+      // Metadata not shown on this form must survive an edit untouched.
+      tags: existing?.tags ?? const [],
+      isFavorite: existing?.isFavorite ?? false,
     );
 
-    final success =
-        await ref.read(accountListProvider.notifier).addAccount(account);
+    final notifier = ref.read(accountListProvider.notifier);
+    final success = _isEditing
+        ? await notifier.updateAccount(account)
+        : await notifier.addAccount(account);
     if (!mounted) return;
     if (success) {
       Navigator.of(context).pop();
     } else {
-      _notify('Failed to save account');
+      _notify(_isEditing ? 'Failed to save changes' : 'Failed to save account');
     }
   }
 
@@ -337,120 +372,83 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       );
     }
 
-    return DropRegion(
-      formats: Formats.standardFormats,
-      hitTestBehavior: HitTestBehavior.opaque,
-      onDropOver: (DropOverEvent event) {
-        if (event.session.items.isEmpty) return DropOperation.none;
-        final item = event.session.items.first;
-        if (item.dataReader?.canProvide(Formats.png) == true || 
-            item.dataReader?.canProvide(Formats.jpeg) == true || 
-            item.dataReader?.canProvide(Formats.webp) == true) {
-           WidgetsBinding.instance.addPostFrameCallback((_) {
-             if (mounted && !_isDragging) setState(() => _isDragging = true);
-           });
-           return DropOperation.copy;
-        }
-        return DropOperation.none;
-      },
-      onDropLeave: (DropEvent event) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _isDragging) setState(() => _isDragging = false);
-        });
-      },
-      onPerformDrop: _handlePerformDrop,
-      child: Scaffold(
-        backgroundColor: const Color(0xFF5B21B6),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF5B21B6),
-          leading: const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: BrandedLogo(),
-          ),
-          title: const Text('Add Account', style: TextStyle(color: Colors.white)),
-          iconTheme: const IconThemeData(color: Colors.white),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ],
-        ),
-        body: Stack(
-          children: [
-            ResponsiveLayout(
-              maxWidth: 700,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              child: SingleChildScrollView(
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => setState(() => _isScanning = true),
-                              icon: const Icon(Icons.qr_code_scanner),
-                              label: const Text('Scan QR Code with Camera'),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                side: const BorderSide(color: Colors.tealAccent),
-                                foregroundColor: Colors.tealAccent,
-                              ),
-                            ),
-                          ),
-                          if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux)) ...[
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: _pasteImage,
-                                icon: const Icon(Icons.paste),
-                                label: const Text('Paste Image'),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  side: const BorderSide(color: Colors.tealAccent),
-                                  foregroundColor: Colors.tealAccent,
-                                ),
-                              ),
-                            ),
-                          ]
-                        ],
+    final body = ResponsiveLayout(
+      maxWidth: 700,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // There is nothing to scan when editing text fields — only
+              // shown for a new enrollment.
+              if (!_isEditing) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => setState(() => _isScanning = true),
+                        icon: const Icon(Icons.qr_code_scanner),
+                        label: const Text('Scan QR Code with Camera'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: const BorderSide(color: Colors.tealAccent),
+                          foregroundColor: Colors.tealAccent,
+                        ),
                       ),
-                      if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux)) ...[
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: _isDragging ? Colors.tealAccent.withValues(alpha: 0.2) : Colors.white10,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: _isDragging ? Colors.tealAccent : Colors.white24, style: BorderStyle.solid),
-                          ),
-                          child: Column(
-                            children: [
-                              Icon(Icons.file_upload_outlined, size: 48, color: _isDragging ? Colors.tealAccent : Colors.white54),
-                              const SizedBox(height: 12),
-                              const Text(
-                                'Drag and Drop QR Image Here',
-                                style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
-                              ),
-                            ],
+                    ),
+                    if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux)) ...[
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _pasteImage,
+                          icon: const Icon(Icons.paste),
+                          label: const Text('Paste Image'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            side: const BorderSide(color: Colors.tealAccent),
+                            foregroundColor: Colors.tealAccent,
                           ),
                         ),
-                      ],
-                      const SizedBox(height: 24),
-                      const Row(
-                        children: [
-                          Expanded(child: Divider(color: Colors.white24)),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: Text('OR ENTER MANUALLY', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                          ),
-                          Expanded(child: Divider(color: Colors.white24)),
-                        ],
                       ),
-                      const SizedBox(height: 24),
+                    ]
+                  ],
+                ),
+                if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux)) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: _isDragging ? Colors.tealAccent.withValues(alpha: 0.2) : Colors.white10,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _isDragging ? Colors.tealAccent : Colors.white24, style: BorderStyle.solid),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(Icons.file_upload_outlined, size: 48, color: _isDragging ? Colors.tealAccent : Colors.white54),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Drag and Drop QR Image Here',
+                          style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 24),
+                const Row(
+                  children: [
+                    Expanded(child: Divider(color: Colors.white24)),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text('OR ENTER MANUALLY', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                    ),
+                    Expanded(child: Divider(color: Colors.white24)),
+                  ],
+                ),
+                const SizedBox(height: 24),
+              ],
                       TextFormField(
                         controller: _issuerController,
                         style: const TextStyle(color: Colors.white),
@@ -659,31 +657,83 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: _saveAccount,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: Colors.teal,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('ADD ACCOUNT', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _saveAccount,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Colors.teal,
+                  foregroundColor: Colors.white,
+                ),
+                child: Text(
+                  _isEditing ? 'SAVE CHANGES' : 'ADD ACCOUNT',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
-            ),
-            if (_isDecoding)
-              Container(
-                color: Colors.black54,
-                child: const Center(
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
+    );
+
+    final scaffold = Scaffold(
+      backgroundColor: const Color(0xFF5B21B6),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF5B21B6),
+        leading: const Padding(
+          padding: EdgeInsets.all(8.0),
+          child: BrandedLogo(),
+        ),
+        title: Text(
+          _isEditing ? 'Edit Account' : 'Add Account',
+          style: const TextStyle(color: Colors.white),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          body,
+          if (_isDecoding)
+            Container(
+              color: Colors.black54,
+              child: const Center(child: CircularProgressIndicator()),
+            ),
+        ],
+      ),
+    );
+
+    // Drag-and-drop QR import only applies to a new enrollment.
+    if (_isEditing) return scaffold;
+
+    return DropRegion(
+      formats: Formats.standardFormats,
+      hitTestBehavior: HitTestBehavior.opaque,
+      onDropOver: (DropOverEvent event) {
+        if (event.session.items.isEmpty) return DropOperation.none;
+        final item = event.session.items.first;
+        if (item.dataReader?.canProvide(Formats.png) == true ||
+            item.dataReader?.canProvide(Formats.jpeg) == true ||
+            item.dataReader?.canProvide(Formats.webp) == true) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && !_isDragging) setState(() => _isDragging = true);
+          });
+          return DropOperation.copy;
+        }
+        return DropOperation.none;
+      },
+      onDropLeave: (DropEvent event) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _isDragging) setState(() => _isDragging = false);
+        });
+      },
+      onPerformDrop: _handlePerformDrop,
+      child: scaffold,
     );
   }
 }

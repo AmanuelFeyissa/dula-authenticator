@@ -45,7 +45,12 @@ class _BackupImportReviewScreenState
   @override
   void initState() {
     super.initState();
-    final existing = ref.read(accountListProvider).value ?? const [];
+    // A corrupted account's secret is ciphertext, not a real value
+    // (ADR-0015 §7) — it can never meaningfully match an incoming plaintext
+    // secret, so it is excluded rather than left to coincidentally not-match.
+    final existing = (ref.read(accountListProvider).value ?? const [])
+        .where((a) => a.loadError == null)
+        .toList();
     _plan = ImportMerge.plan(existing: existing, incoming: widget.incoming);
     // New accounts are opted in by default; duplicates are opted out, since
     // the vault already has something matching them.

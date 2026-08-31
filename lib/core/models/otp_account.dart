@@ -25,6 +25,24 @@ class OtpAccount {
   /// HOTP moving factor. Advances on use, not with the clock.
   final int counter;
 
+  /// Freeform, user-created labels. Presented in the UI as a single-select
+  /// "folder" filter, but stored as multi-membership so an account can carry
+  /// more than one — see docs/adr/0015-account-management.md.
+  final List<String> tags;
+
+  /// Whether the user has marked this account a favorite. Surfaced as a
+  /// quick filter alongside tags, not an automatic sort — an automatic
+  /// top-of-list sort would fight manual drag-reorder (ADR-0015 §3), so
+  /// "favorite" and "position" are independent.
+  final bool isFavorite;
+
+  /// Set only at load time by `AccountRepository.getAccounts` when this
+  /// account's stored secret failed to decrypt. Never persisted — see
+  /// [toMap] — because it describes a failure that happened in this session,
+  /// not a fact about the account. When non-null, [secret] still holds the
+  /// undecrypted ciphertext, not a usable value.
+  final String? loadError;
+
   const OtpAccount({
     required this.id,
     required this.issuer,
@@ -35,6 +53,9 @@ class OtpAccount {
     this.period = 30,
     this.algorithm = OtpAlgorithm.sha1,
     this.counter = 0,
+    this.tags = const [],
+    this.isFavorite = false,
+    this.loadError,
   });
 
   /// A display label that is never empty.
@@ -80,6 +101,10 @@ class OtpAccount {
     int? period,
     OtpAlgorithm? algorithm,
     int? counter,
+    List<String>? tags,
+    bool? isFavorite,
+    String? loadError,
+    bool clearLoadError = false,
   }) {
     return OtpAccount(
       id: id ?? this.id,
@@ -91,6 +116,9 @@ class OtpAccount {
       period: period ?? this.period,
       algorithm: algorithm ?? this.algorithm,
       counter: counter ?? this.counter,
+      tags: tags ?? this.tags,
+      isFavorite: isFavorite ?? this.isFavorite,
+      loadError: clearLoadError ? null : (loadError ?? this.loadError),
     );
   }
 
@@ -104,6 +132,9 @@ class OtpAccount {
         'period': period,
         'algorithm': algorithm.name,
         'counter': counter,
+        'tags': tags,
+        'isFavorite': isFavorite,
+        // loadError is intentionally omitted: see its doc comment.
       };
 
   factory OtpAccount.fromMap(Map<String, dynamic> map) => OtpAccount(
@@ -116,6 +147,12 @@ class OtpAccount {
         period: (map['period'] as num?)?.toInt() ?? 30,
         algorithm: OtpAlgorithm.fromName(map['algorithm'] as String?),
         counter: (map['counter'] as num?)?.toInt() ?? 0,
+        tags: map['tags'] is List
+            ? (map['tags'] as List).whereType<String>().toList()
+            : const [],
+        isFavorite: map['isFavorite'] as bool? ?? false,
+        // loadError is never read back: a stored value would be stale from a
+        // previous session and could not possibly still be accurate.
       );
 
   String toJson() => json.encode(toMap());

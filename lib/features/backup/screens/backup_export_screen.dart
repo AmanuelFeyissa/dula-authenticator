@@ -52,7 +52,12 @@ class _BackupExportScreenState extends ConsumerState<BackupExportScreen> {
       _error = null;
     });
 
-    final accounts = ref.read(accountListProvider).value ?? const [];
+    // A corrupted account's `secret` is still ciphertext, not a usable
+    // value (ADR-0015 §7) — exporting it would write garbage into the
+    // backup and silently corrupt whatever imports it later.
+    final accounts = (ref.read(accountListProvider).value ?? const [])
+        .where((a) => a.loadError == null)
+        .toList();
     final result = await BackupService.export(accounts, _passphrase.text);
 
     if (!mounted) return;

@@ -69,6 +69,51 @@ class AccountListNotifier extends StateNotifier<AsyncValue<List<OtpAccount>>> {
     if (saved) await loadAccounts();
   }
 
+  Future<bool> updateAccount(OtpAccount account) async {
+    final authState = _ref.read(authStateProvider);
+    final success =
+        await _repository.updateAccount(account, masterKey: authState.masterKey);
+    if (success) await loadAccounts();
+    return success;
+  }
+
+  Future<void> toggleFavorite(String id) async {
+    final current = state.value ?? const [];
+    OtpAccount? account;
+    for (final a in current) {
+      if (a.id == id) {
+        account = a;
+        break;
+      }
+    }
+    if (account == null) return;
+    await updateAccount(account.copyWith(isFavorite: !account.isFavorite));
+  }
+
+  Future<void> setTags(String id, List<String> tags) async {
+    final current = state.value ?? const [];
+    OtpAccount? account;
+    for (final a in current) {
+      if (a.id == id) {
+        account = a;
+        break;
+      }
+    }
+    if (account == null) return;
+    await updateAccount(account.copyWith(tags: tags));
+  }
+
+  /// Persists a new manual order. There is no separate sort field — the
+  /// stored array position *is* the order (ADR-0015 §3).
+  Future<void> reorder(List<String> orderedIds) async {
+    final authState = _ref.read(authStateProvider);
+    final success = await _repository.reorderAccounts(
+      orderedIds,
+      masterKey: authState.masterKey,
+    );
+    if (success) await loadAccounts();
+  }
+
   Future<void> clearAllAccounts() async {
     await _repository.clearAll();
     await loadAccounts();

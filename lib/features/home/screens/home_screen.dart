@@ -10,11 +10,51 @@ import 'package:dula_auth/core/branding/branding_config.dart';
 import 'package:dula_auth/features/accounts/screens/add_account_screen.dart';
 import 'package:dula_auth/features/settings/screens/settings_screen.dart';
 
-class HomeScreen extends ConsumerWidget {
+/// The account list: search, tag/favorite filtering, manual reordering, and
+/// per-account actions (edit, favorite, tags, delete).
+///
+/// See docs/adr/0015-account-management.md. Manual drag-reorder is only
+/// offered against the unfiltered list — reordering a filtered subset has no
+/// unambiguous meaning for where a dropped item lands in the full list, so a
+/// search or filter in effect switches the list to a plain, non-draggable
+/// view rather than guessing.
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+  String? _activeTag;
+  bool _favoritesOnly = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  bool get _filtering =>
+      _query.isNotEmpty || _activeTag != null || _favoritesOnly;
+
+  List<OtpAccount> _filtered(List<OtpAccount> accounts) {
+    if (!_filtering) return accounts;
+    final query = _query.toLowerCase();
+    return accounts.where((a) {
+      if (_favoritesOnly && !a.isFavorite) return false;
+      if (_activeTag != null && !a.tags.contains(_activeTag)) return false;
+      if (query.isEmpty) return true;
+      return a.issuer.toLowerCase().contains(query) ||
+          a.accountName.toLowerCase().contains(query) ||
+          a.tags.any((t) => t.toLowerCase().contains(query));
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final accountsState = ref.watch(accountListProvider);
     final theme = Theme.of(context);
     final branding = ref.watch(brandingConfigProvider);
@@ -75,19 +115,29 @@ class HomeScreen extends ConsumerWidget {
       ),
       body: ResponsiveLayout(
         maxWidth: 800,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         child: accountsState.when(
           data: (accounts) {
-            if (accounts.isEmpty) {
-              return _buildEmptyState(context);
-            }
+            if (accounts.isEmpty) return _buildEmptyState(context);
 
-            return ListView.builder(
-              itemCount: accounts.length,
-              itemBuilder: (context, index) {
-                final account = accounts[index];
-                return _AccountCard(account: account);
-              },
+            final tags = accounts.expand((a) => a.tags).toSet().toList()
+              ..sort();
+            final filtered = _filtered(accounts);
+
+            return Column(
+              children: [
+                _buildSearchField(),
+                if (tags.isNotEmpty || accounts.any((a) => a.isFavorite))
+                  _buildFilterChips(tags),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: filtered.isEmpty
+                      ? _buildNoMatches()
+                      : _filtering
+                          ? _buildStaticList(filtered)
+                          : _buildReorderableList(filtered),
+                ),
+              ],
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -99,6 +149,103 @@ class HomeScreen extends ConsumerWidget {
         icon: const Icon(Icons.add),
         label: const Text('Add Account'),
       ),
+    );
+  }
+
+  Widget _buildSearchField() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (value) => setState(() => _query = value),
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: 'Search accounts',
+          hintStyle: const TextStyle(color: Colors.white38),
+          prefixIcon: const Icon(Icons.search, color: Colors.white38),
+          suffixIcon: _query.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.clear, color: Colors.white38),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _query = '');
+                  },
+                ),
+          filled: true,
+          fillColor: Colors.white.withValues(alpha: 0.06),
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChips(List<String> tags) {
+    return SizedBox(
+      height: 36,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          FilterChip(
+            label: const Text('★ Favorites'),
+            selected: _favoritesOnly,
+            onSelected: (v) => setState(() => _favoritesOnly = v),
+          ),
+          for (final tag in tags) ...[
+            const SizedBox(width: 8),
+            FilterChip(
+              label: Text(tag),
+              selected: _activeTag == tag,
+              onSelected: (v) =>
+                  setState(() => _activeTag = v ? tag : null),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoMatches() {
+    return const Center(
+      child: Text(
+        'No accounts match this search or filter.',
+        style: TextStyle(color: Colors.white54),
+      ),
+    );
+  }
+
+  Widget _buildStaticList(List<OtpAccount> accounts) {
+    return ListView.builder(
+      itemCount: accounts.length,
+      itemBuilder: (context, index) => accounts[index].loadError != null
+          ? _CorruptedAccountCard(account: accounts[index])
+          : _AccountCard(account: accounts[index]),
+    );
+  }
+
+  Widget _buildReorderableList(List<OtpAccount> accounts) {
+    return ReorderableListView.builder(
+      itemCount: accounts.length,
+      onReorder: (oldIndex, newIndex) {
+        if (newIndex > oldIndex) newIndex -= 1;
+        final ids = accounts.map((a) => a.id).toList();
+        final id = ids.removeAt(oldIndex);
+        ids.insert(newIndex, id);
+        ref.read(accountListProvider.notifier).reorder(ids);
+      },
+      itemBuilder: (context, index) {
+        final account = accounts[index];
+        return KeyedSubtree(
+          key: Key(account.id),
+          child: account.loadError != null
+              ? _CorruptedAccountCard(account: account)
+              : _AccountCard(account: account),
+        );
+      },
     );
   }
 
@@ -190,6 +337,90 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
+/// A card for an account whose secret failed to decrypt (ADR-0015 §7).
+///
+/// Deliberately minimal: no code, no copy, no favorite/tag/edit actions —
+/// there is nothing usable to act on beyond identifying and removing it.
+class _CorruptedAccountCard extends ConsumerWidget {
+  final OtpAccount account;
+
+  const _CorruptedAccountCard({required this.account});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Dismissible(
+      key: Key(account.id),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (_) => showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Delete Account'),
+          content: Text(
+            'Remove ${account.displayName}? Its secret could not be read, '
+            'so this cannot be undone by anything other than re-enrolling it.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('CANCEL'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('DELETE', style: TextStyle(color: Colors.redAccent)),
+            ),
+          ],
+        ),
+      ),
+      onDismissed: (_) =>
+          ref.read(accountListProvider.notifier).deleteAccount(account.id),
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        decoration: BoxDecoration(
+          color: Colors.redAccent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.redAccent.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    account.issuer.isNotEmpty ? account.issuer : 'Authenticator',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    account.accountName,
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Could not read this account\'s secret. Swipe to remove it.',
+                    style: TextStyle(color: Colors.redAccent, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _AccountCard extends ConsumerWidget {
   final OtpAccount account;
 
@@ -274,86 +505,241 @@ class _AccountCard extends ConsumerWidget {
               ),
             ],
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      account.issuer.isNotEmpty ? account.issuer : 'Authenticator',
-                      style: const TextStyle(fontSize: 14, color: Colors.white54, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      account.accountName,
-                      style: const TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      codeError ?? formattedCode,
-                      style: TextStyle(
-                        fontSize: codeError != null ? 20 : 34,
-                        color: codeError != null
-                            ? Colors.redAccent
-                            : Colors.white,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: codeError != null ? 0 : 2.0,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (isCounterBased)
-                // HOTP codes do not expire on a clock; the user advances the
-                // counter explicitly when they need the next one.
-                Tooltip(
-                  message: 'Generate next code',
-                  child: IconButton(
-                    iconSize: 32,
-                    color: Colors.tealAccent,
-                    icon: const Icon(Icons.refresh),
-                    onPressed: () => ref
-                        .read(accountListProvider.notifier)
-                        .advanceCounter(account.id),
-                  ),
-                )
-              else
-                SizedBox(
-                  width: 48,
-                  height: 48,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      CircularProgressIndicator(
-                        value: progress,
-                        backgroundColor: Colors.white12,
-                        color: remainingSeconds <= 5
-                            ? Colors.redAccent
-                            : Colors.tealAccent,
-                        strokeWidth: 4,
-                      ),
-                      Center(
-                        child: Text(
-                          remainingSeconds.toString(),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                account.issuer.isNotEmpty ? account.issuer : 'Authenticator',
+                                style: const TextStyle(fontSize: 14, color: Colors.white54, fontWeight: FontWeight.w600),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (account.isFavorite)
+                              const Padding(
+                                padding: EdgeInsets.only(left: 4),
+                                child: Icon(Icons.star, size: 14, color: Colors.amberAccent),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          account.accountName,
+                          style: const TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          codeError ?? formattedCode,
                           style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                            fontSize: codeError != null ? 20 : 34,
+                            color: codeError != null
+                                ? Colors.redAccent
+                                : Colors.white,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: codeError != null ? 0 : 2.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isCounterBased)
+                    // HOTP codes do not expire on a clock; the user advances the
+                    // counter explicitly when they need the next one.
+                    Tooltip(
+                      message: 'Generate next code',
+                      child: IconButton(
+                        iconSize: 32,
+                        color: Colors.tealAccent,
+                        icon: const Icon(Icons.refresh),
+                        onPressed: () => ref
+                            .read(accountListProvider.notifier)
+                            .advanceCounter(account.id),
+                      ),
+                    )
+                  else
+                    SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          CircularProgressIndicator(
+                            value: progress,
+                            backgroundColor: Colors.white12,
                             color: remainingSeconds <= 5
                                 ? Colors.redAccent
-                                : Colors.white70,
+                                : Colors.tealAccent,
+                            strokeWidth: 4,
                           ),
+                          Center(
+                            child: Text(
+                              remainingSeconds.toString(),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: remainingSeconds <= 5
+                                    ? Colors.redAccent
+                                    : Colors.white70,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, color: Colors.white38, size: 20),
+                    onSelected: (value) => _handleMenu(context, ref, value),
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'favorite',
+                        child: Row(
+                          children: [
+                            Icon(
+                              account.isFavorite ? Icons.star : Icons.star_border,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(account.isFavorite
+                                ? 'Remove from favorites'
+                                : 'Add to favorites'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'tags',
+                        child: Row(
+                          children: [
+                            Icon(Icons.label_outline, size: 18),
+                            SizedBox(width: 12),
+                            Text('Manage tags'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined, size: 18),
+                            SizedBox(width: 12),
+                            Text('Edit'),
+                          ],
                         ),
                       ),
                     ],
                   ),
+                ],
+              ),
+              if (account.tags.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final tag in account.tags)
+                      Chip(
+                        label: Text(tag, style: const TextStyle(fontSize: 11)),
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        backgroundColor: Colors.white.withValues(alpha: 0.08),
+                        side: BorderSide.none,
+                        padding: EdgeInsets.zero,
+                      ),
+                  ],
                 ),
+              ],
             ],
           ),
         ),
       ),
     );
+  }
+
+  void _handleMenu(BuildContext context, WidgetRef ref, String value) {
+    final notifier = ref.read(accountListProvider.notifier);
+    switch (value) {
+      case 'favorite':
+        notifier.toggleFavorite(account.id);
+      case 'tags':
+        _showTagEditor(context, ref);
+      case 'edit':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => AddAccountScreen(existing: account)),
+        );
+    }
+  }
+
+  Future<void> _showTagEditor(BuildContext context, WidgetRef ref) async {
+    final tags = List<String>.from(account.tags);
+    final controller = TextEditingController();
+
+    final result = await showDialog<List<String>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1B4B),
+          title: const Text('Tags'),
+          content: SizedBox(
+            width: 320,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final tag in tags)
+                      Chip(
+                        label: Text(tag),
+                        onDeleted: () => setDialogState(() => tags.remove(tag)),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  decoration: const InputDecoration(
+                    hintText: 'New tag',
+                    border: OutlineInputBorder(),
+                  ),
+                  onSubmitted: (value) {
+                    final trimmed = value.trim();
+                    if (trimmed.isNotEmpty && !tags.contains(trimmed)) {
+                      setDialogState(() {
+                        tags.add(trimmed);
+                        controller.clear();
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('CANCEL'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(tags),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != null) {
+      await ref.read(accountListProvider.notifier).setTags(account.id, result);
+    }
   }
 
   /// Groups a code for readability: 6-digit as 3+3, 8-digit as 4+4.

@@ -73,6 +73,7 @@ Current ADR index (see each file for full context/decision/consequences):
 | [0012](docs/adr/0012-pluggable-otp-types.md) | Pluggable OTP generators: TOTP, HOTP, Steam Guard; honor `otpauth://` parameters |
 | [0013](docs/adr/0013-backup-export-and-import.md) | Local encrypted backup (passphrase-protected); import from Google Authenticator/Aegis/2FAS; no cloud sync |
 | [0014](docs/adr/0014-remove-directory-authentication.md) | Enterprise directory auth removed entirely (supersedes 0003) |
+| [0015](docs/adr/0015-account-management.md) | Tags (not a single folder), favorites as a filter, no explicit sort field, corrupt-account isolation |
 
 ## Attribution — hard constraint
 
