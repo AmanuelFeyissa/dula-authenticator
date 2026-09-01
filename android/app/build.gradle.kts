@@ -42,3 +42,10 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Theme.AppCompat.* (styles.xml) needs this on the classpath — local_auth's
+    // biometric dialog requires an AppCompat theme parent, and nothing else in
+    // this project's dependency graph guarantees androidx.appcompat is present.
+    implementation("androidx.appcompat:appcompat:1.7.0")
+}

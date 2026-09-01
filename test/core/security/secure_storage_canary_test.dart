@@ -1,7 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart' show TargetPlatform;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dula_auth/core/security/secure_storage_canary.dart';
 import 'package:dula_auth/core/vault/secret_store.dart';
+
+class _HangingSecretStore implements SecretStore {
+  @override
+  Future<String?> read(String key) => Completer<String?>().future;
+
+  @override
+  Future<void> write(String key, String value) => Completer<void>().future;
+
+  @override
+  Future<void> delete(String key) => Completer<void>().future;
+}
 
 class _ThrowingSecretStore implements SecretStore {
   @override
@@ -43,6 +56,20 @@ void main() {
         await SecureStorageCanary.check(_SilentlyWrongSecretStore()),
         isFalse,
       );
+    });
+
+    test(
+        'false within a bounded time when the store never responds '
+        '(e.g. a hung platform call with no D-Bus session)', () async {
+      final result = await SecureStorageCanary.check(_HangingSecretStore())
+          .timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw TimeoutException(
+          'check() did not resolve on its own — it needs its own internal '
+          'timeout around the underlying store calls',
+        ),
+      );
+      expect(result, isFalse);
     });
 
     test('leaves no canary key behind after a successful check', () async {

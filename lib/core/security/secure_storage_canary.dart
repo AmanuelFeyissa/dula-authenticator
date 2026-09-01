@@ -20,15 +20,25 @@ bool secureStorageCanaryAppliesOn(TargetPlatform platform) =>
 class SecureStorageCanary {
   static const _key = '_secure_storage_canary_probe';
 
+  // A D-Bus call with no Secret Service listening at all doesn't error —
+  // it hangs indefinitely, which would leave this check (and the "fail
+  // loudly" guarantee it exists for) silently never resolving. This bounds
+  // it so a hung platform call is treated the same as any other failure.
+  static const _timeout = Duration(seconds: 5);
+
   static Future<bool> check(SecretStore store) async {
     try {
       const probe = 'ok';
-      await store.write(_key, probe);
-      final readBack = await store.read(_key);
-      await store.delete(_key);
-      return readBack == probe;
+      return await _roundTrip(store, probe).timeout(_timeout);
     } catch (_) {
       return false;
     }
+  }
+
+  static Future<bool> _roundTrip(SecretStore store, String probe) async {
+    await store.write(_key, probe);
+    final readBack = await store.read(_key);
+    await store.delete(_key);
+    return readBack == probe;
   }
 }

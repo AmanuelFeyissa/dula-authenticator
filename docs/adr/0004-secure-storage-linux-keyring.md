@@ -61,7 +61,8 @@ silent gap.
 
 **Risks:** The canary-check UX needs real testing against at least one keyring-less Linux
 environment (e.g. a minimal Debian netinstall without a desktop environment) before this ships,
-tracked as a Phase 3 validation task.
+tracked as a Phase 3 validation task. Update (Phase 7): this validation was performed and found a
+real gap in the canary's failure handling — see ADR-0017.
 
 ## Alternatives Considered
 - **Custom AES-encrypted file fallback when no keyring is detected** — rejected per point 4 above:
@@ -91,5 +92,12 @@ channel: `test/core/security/secure_storage_canary_test.dart` covers the round t
 `InMemorySecretStore` and failure doubles; `test/core/widgets/app_lifecycle_wrapper_test.dart`
 covers the blocking screen end-to-end with `debugDefaultTargetPlatformOverride` and an
 in-memory-backed `AuthRepository`, avoiding any real secure-storage or biometrics plugin channel.
-Empirical validation against a real keyring-less Linux install (the Risk flagged above) remains a
-manual/CI task, not yet performed.
+Empirical validation against a real keyring-less Linux install (the Risk flagged above) was
+performed in Phase 7 (Docker + Xvfb + `dbus-launch`, with and without `gnome-keyring-daemon`
+running). It confirmed the round trip and the blocking screen both work correctly when the
+underlying platform call actually completes, and found `check()` had no timeout for the case where
+it doesn't — fixed with a bounded `.timeout()` (`_HangingSecretStore` test). Testing also found that
+fix is necessary but not sufficient: a real no-keyring `flutter_secure_storage_linux` call can
+freeze the whole Dart isolate rather than returning or throwing, which no Dart-level timeout can
+recover from. See ADR-0017 for the full finding and the decision to defer the isolate-based fix that
+would fully close it.
