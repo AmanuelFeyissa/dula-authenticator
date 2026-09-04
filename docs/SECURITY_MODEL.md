@@ -125,7 +125,7 @@ Support differs per platform, and the app must not imply protection it does not 
 
 | Capability | Android | iOS | Windows | macOS | Linux | Web |
 |---|---|---|---|---|---|---|
-| OS-backed secret storage | Keystore | Keychain | DPAPI | Keychain | libsecret — **requires a running keyring daemon**, checked at startup with a blocking error if missing ([ADR-0004](adr/0004-secure-storage-linux-keyring.md)) | **None** |
+| OS-backed secret storage | Keystore | Keychain | DPAPI | Keychain | libsecret — **requires a running keyring daemon**, checked at startup ([ADR-0004](adr/0004-secure-storage-linux-keyring.md)); with no keyring the app currently **hangs at startup instead of showing that error** ([ADR-0017](adr/0017-linux-secure-storage-isolate-freeze.md)) | **None** |
 | Biometric unlock (`local_auth`) | yes | yes | yes (Hello) | yes | **no implementation** | **no implementation** |
 | Camera QR enrollment (`mobile_scanner`) | yes | yes | **no** | yes | **no** | yes |
 | Clipboard QR image paste (`pasteboard`) | yes | yes | yes | yes | yes | **no** |
