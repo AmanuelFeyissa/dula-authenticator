@@ -1,7 +1,8 @@
 # ADR-0017: Linux Secure-Storage Calls Can Freeze the Dart Isolate
 
 ## Status
-Accepted — partial mitigation implemented; full fix deferred
+Accepted — canary moved to a background isolate; the app-level freeze is
+localised but not yet closed (see Update below)
 
 ## Context
 ADR-0004 added `SecureStorageCanary.check()` so a missing Linux keyring daemon fails loudly at
@@ -73,6 +74,37 @@ adds on its own side.
 - **Attempt the full isolate-based fix in this same session** — rejected: the blast radius (every
   `SecretStore` caller) and the need for its own TDD cycle make it a poor fit for a testing pass;
   doing it hastily risks a worse outcome than deferring it deliberately.
+
+## Update — the isolate boundary was built, and the freeze survived it
+Decision item 2 was subsequently reversed in part: the canary probe *was* moved
+onto a background isolate (`lib/core/security/isolated_secure_storage_probe.dart`,
+reached through `secureStorageProbeProvider`). It works — verified in the same
+container, through a real platform channel bootstrapped with
+`BackgroundIsolateBinaryMessenger`: with a working keyring the probe answers
+`true` in ~700ms from the spawned isolate, and its unit tests cover the
+answer, timeout-and-kill, and probe-crash paths.
+
+It does not fix the app-level freeze. Re-running the no-keyring case with the
+heartbeat instrumentation still showed one tick and then silence: the main
+isolate is *still* blocked, because the canary was never the only secure-storage
+call at startup. `AuthRepository` and `AccountRepository` both construct
+`FlutterSecretStore` directly (`lib/features/auth/repositories/auth_repository.dart`,
+`lib/core/repositories/account_repository.dart`), and the auth state's own
+startup read blocks the main isolate exactly as the canary used to.
+
+So the remaining work is precisely what this ADR predicted, now located rather
+than guessed at: **every** `SecretStore` call has to cross the isolate boundary,
+not just the canary — most likely as an `IsolatedSecretStore implements
+SecretStore` with a long-lived worker isolate, so existing call sites keep
+depending only on the interface they already use.
+
+That change is deliberately not being made in the same pass, because it raises a
+security-design question this ADR should not answer by improvisation: what the
+app must do when a secret read *fails or times out* mid-flight rather than
+returning. Treating an unreadable vault as "no credential set" would drop the
+user into first-run setup over an existing vault, which is worse than hanging.
+The blocking-error screen has to win that race deliberately, and that needs
+designing.
 
 ## References
 - ADR-0004 (Cross-Platform Secure Storage & the Linux Keyring Dependency) — the risk this ADR

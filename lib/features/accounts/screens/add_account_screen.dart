@@ -10,12 +10,24 @@ import 'package:dula_auth/core/widgets/responsive_layout.dart';
 import 'package:dula_auth/core/branding/branded_logo.dart';
 import 'package:dula_auth/core/theme/app_theme.dart';
 import 'package:dula_auth/features/accounts/enrollment_capabilities.dart';
+import 'package:dula_auth/features/accounts/screens/qr_scanner_screen.dart';
 import 'package:dula_auth/features/home/providers/home_provider.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 import 'package:image/image.dart' as img;
 import 'package:zxing2/qrcode.dart';
 import 'package:pasteboard/pasteboard.dart';
+
+/// How the camera scanner is launched, and what a scan returns.
+///
+/// Injectable so the scan-result flow (fields filled, confirmation shown,
+/// user returned to the form) is testable without a real camera — the same
+/// seam pattern as `secureStoreProvider` in `app_lifecycle_wrapper.dart`.
+final qrScanLauncherProvider =
+    Provider<Future<String?> Function(BuildContext)>(
+  (ref) => (context) => Navigator.of(context).push<String>(
+        MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+      ),
+);
 
 class AddAccountScreen extends ConsumerStatefulWidget {
   /// When supplied, the screen edits this account instead of creating a new
@@ -44,7 +56,6 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   final _counterController = TextEditingController(text: '0');
   bool _showAdvanced = false;
 
-  bool _isScanning = false;
   bool _isDragging = false;
   bool _isDecoding = false;
 
@@ -128,15 +139,16 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     );
   }
 
-  void _onDetect(BarcodeCapture capture) {
-    if (!_isScanning) return;
-    
-    final List<Barcode> barcodes = capture.barcodes;
-    if (barcodes.isNotEmpty && barcodes.first.rawValue != null) {
-      final code = barcodes.first.rawValue!;
-      setState(() => _isScanning = false);
-      _processFoundUrl(code);
-    }
+  /// Opens the scanner, then handles whatever it returns.
+  ///
+  /// The result is processed only after the scanner route is gone, so the
+  /// confirmation snackbar lands on the form where the user can actually see
+  /// it — the old inline scanner showed it behind a camera preview that was
+  /// still on screen.
+  Future<void> _startScan() async {
+    final code = await ref.read(qrScanLauncherProvider)(context);
+    if (!mounted || code == null) return;
+    _processFoundUrl(code);
   }
 
   Future<void> _handlePerformDrop(PerformDropEvent event) async {
@@ -358,21 +370,6 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isScanning) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Scan QR Code', style: TextStyle(color: Colors.white)),
-          leading: IconButton(
-            icon: const Icon(Icons.close, color: Colors.white),
-            onPressed: () => setState(() => _isScanning = false),
-          ),
-        ),
-        body: MobileScanner(
-          onDetect: _onDetect,
-        ),
-      );
-    }
-
     final body = ResponsiveLayout(
       maxWidth: 700,
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -390,7 +387,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                     if (EnrollmentCapabilities.cameraScanning)
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () => setState(() => _isScanning = true),
+                          onPressed: _startScan,
                           icon: const Icon(Icons.qr_code_scanner),
                           label: const Text('Scan QR Code with Camera'),
                         ),

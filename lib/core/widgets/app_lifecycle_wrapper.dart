@@ -6,18 +6,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:screen_protector/screen_protector.dart';
 import 'package:root_checker_plus/root_checker_plus.dart';
 import 'package:dula_auth/core/branding/branding_config.dart';
+import 'package:dula_auth/core/security/isolated_secure_storage_probe.dart';
 import 'package:dula_auth/core/security/secure_storage_canary.dart';
-import 'package:dula_auth/core/vault/secret_store.dart';
 import 'package:dula_auth/features/auth/providers/auth_provider.dart';
 import 'package:dula_auth/features/auth/screens/app_lock_screen.dart';
 import 'package:dula_auth/features/auth/screens/credential_setup_screen.dart';
 import 'package:dula_auth/features/settings/providers/settings_provider.dart';
 
-/// The secret store this app talks to at startup. Overridden in tests with
-/// an in-memory or failing double so the Linux keyring canary (ADR-0004) can
-/// be exercised without a real platform channel.
-final secureStoreProvider =
-    Provider<SecretStore>((ref) => const FlutterSecretStore());
+/// How the startup secure-storage check runs.
+///
+/// The default runs the ADR-0004 canary on a background isolate (ADR-0017),
+/// because a no-keyring libsecret call on Linux blocks whichever isolate makes
+/// it — including the timer that would otherwise time it out. Overridden in
+/// tests with an in-process check against a fake store, so the blocking-error
+/// screen can be exercised without a real platform channel.
+final secureStorageProbeProvider = Provider<Future<bool> Function()>(
+  (ref) => IsolatedSecureStorageProbe.run,
+);
 
 class AppLifecycleWrapper extends ConsumerStatefulWidget {
   final Widget child;
@@ -47,7 +52,7 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
     if (kIsWeb || !secureStorageCanaryAppliesOn(defaultTargetPlatform)) {
       return;
     }
-    final ok = await SecureStorageCanary.check(ref.read(secureStoreProvider));
+    final ok = await ref.read(secureStorageProbeProvider)();
     if (mounted && !ok) {
       setState(() => _secureStorageUnavailable = true);
     }

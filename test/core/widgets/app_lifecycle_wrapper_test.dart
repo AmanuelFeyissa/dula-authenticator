@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:dula_auth/core/branding/branding_config.dart';
+import 'package:dula_auth/core/security/secure_storage_canary.dart';
 import 'package:dula_auth/core/vault/secret_store.dart';
 import 'package:dula_auth/core/widgets/app_lifecycle_wrapper.dart';
 import 'package:dula_auth/features/auth/providers/auth_provider.dart';
@@ -37,7 +38,12 @@ void main() {
         ProviderScope(
           overrides: [
             brandingConfigProvider.overrideWithValue(BrandingConfig.fallback),
-            secureStoreProvider.overrideWithValue(_ThrowingSecretStore()),
+            // In-process against a failing store: the real probe runs on a
+            // background isolate (ADR-0017), which a widget test has no root
+            // token to bootstrap platform channels on.
+            secureStorageProbeProvider.overrideWithValue(
+              () => SecureStorageCanary.check(_ThrowingSecretStore()),
+            ),
             // In-memory so the (still-unresolved) auth check behind the
             // storage gate never reaches a real platform channel.
             authRepositoryProvider.overrideWithValue(
