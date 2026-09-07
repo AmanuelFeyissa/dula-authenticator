@@ -1,7 +1,9 @@
 # ADR-0007: Air-Gapped Operability & Zero-Telemetry Stance
 
 ## Status
-Proposed
+Partially implemented. The zero-telemetry rule is in force and verified — the app makes no outbound
+network calls, and the now-unused Android `INTERNET` permission was removed. The release-engineering
+half (SBOM, signed releases, a documented offline build path) is still outstanding.
 
 ## Context
 A second explicit target use case is fully air-gapped networks: no outbound internet access at

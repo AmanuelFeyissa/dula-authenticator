@@ -69,6 +69,6 @@ flutter_launcher_icons:
 
 # No default flutter_launcher_icons/msix branding config ships in the open-source
 # project (see docs/adr/0002-white-label-branding.md and docs/BRANDING.md) - the
-# original bank's logo is not redistributed. A deployer who wants a custom app
+# no third-party logo is redistributed. A deployer who wants a custom app
 # icon and MSIX package identity should add their own flutter_launcher_icons and
 # msix_config blocks here, pointing at their own logo asset.

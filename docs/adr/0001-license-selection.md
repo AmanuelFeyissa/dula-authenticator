@@ -1,14 +1,13 @@
 # ADR-0001: Open-Source License — Apache License 2.0
 
 ## Status
-Proposed
+Accepted — implemented (`LICENSE`, `NOTICE`).
 
 ## Context
-This project is being open-sourced from a bank-internal codebase so that any organization —
-commercial, non-profit, or government — can adopt, fork, and modify it, including for
-security-sensitive deployments (air-gapped networks, regulated industries). The license choice
-determines who can legally use, modify, and redistribute the code, and how much legal risk
-adopters take on.
+This project is open-sourced so that any organization — commercial, non-profit, or government — can
+adopt, fork, and modify it, including for security-sensitive deployments (air-gapped networks,
+regulated industries). The license choice determines who can legally use, modify, and redistribute
+the code, and how much legal risk adopters take on.
 
 Research into current (2026) open-source licensing practice shows two realistic candidates for a
 permissive, enterprise-friendly license: MIT and Apache-2.0.
@@ -24,27 +23,26 @@ permissive, enterprise-friendly license: MIT and Apache-2.0.
   of legal uncertainty that MIT leaves silent. Roughly three-quarters of GitHub's open-source
   components now use permissive licenses, and Apache-2.0 is consistently cited as the default
   recommendation "when you're in an enterprise environment where patents are a real risk."
-- This project's origin (a bank's internal security tool) and target audience (other companies'
-  IT/security teams, some in regulated industries) make patent risk a real, not theoretical,
-  concern — an adopting company's legal team is far more likely to approve Apache-2.0 without
-  escalation than a license with no patent language at all.
+- This project's nature (a security tool) and target audience (IT/security teams, some in regulated
+  industries) make patent risk a real, not theoretical, concern — an adopting company's legal team is
+  far more likely to clear Apache-2.0 without escalation than a license with no patent language at
+  all.
 - Copyleft licenses (GPL/AGPL) were ruled out early: they would require any company that modifies
   the app and distributes it internally (arguably not "distribution" under GPL, but AGPL's network
   clause is a real risk for any future server component) to release their modifications. That is
-  precisely the kind of friction that would stop banks and other regulated adopters from using the
-  project at all, which contradicts the stated goal of "any company can use this."
+  precisely the kind of friction that would stop regulated adopters from using the project at all,
+  which contradicts the stated goal of "any company can use this."
 
 ## Decision
 License the project under **Apache License 2.0**.
 
 Concretely, this means:
 - Add a root `LICENSE` file with the standard Apache-2.0 text.
-- Add a `NOTICE` file listing the original copyright holder (with the bank's permission /
-  after legal review — see Phase 1 in the migration plan) and any required third-party notices.
+- Add a `NOTICE` file naming the copyright holder and any required third-party notices.
 - Add an SPDX license header (`SPDX-License-Identifier: Apache-2.0`) to source files as they are
   touched during the de-branding pass, rather than a big-bang rewrite of every file at once.
 - Audit every dependency in `pubspec.yaml` for license compatibility with Apache-2.0 redistribution
-  (tracked as its own task in Phase 1 — see the migration plan) before the first public release,
+  (tracked in `docs/LICENSE_AUDIT.md`) before the first public release,
   since a permissive project license does not override an incompatible dependency license.
 
 ## Consequences
@@ -56,16 +54,15 @@ and corporate legal department.
 modified files). Does not compel downstream modifications to be shared back (a deliberate
 trade-off, not an oversight — see above).
 
-**Risks:** The original bank-internal code was never released publicly; before applying an
-open-source license at all, the bank's legal/compliance team must explicitly approve open-sourcing
-and confirm no proprietary AD/network details remain (this is a prerequisite gate in Phase 1, not
-something this ADR can resolve on its own).
+**Risks:** A permissive project license does not override an incompatible dependency license, so the
+dependency audit (`docs/LICENSE_AUDIT.md`) has to stay current as dependencies change — that is the
+live risk here, not the license text itself.
 
 ## Alternatives Considered
 - **MIT** — simpler, but no patent grant; rejected because patent protection is specifically
   valuable given the project's enterprise/regulated-industry target audience.
 - **GPL-3.0 / AGPL-3.0** — rejected: copyleft obligations (especially AGPL's network clause) would
-  deter the exact adopters (banks, regulated enterprises) this project is aimed at.
+  deter the exact adopters (regulated enterprises) this project is aimed at.
 - **BSD-3-Clause** — comparable permissiveness to MIT without a patent grant; rejected for the same
   reason as MIT.
 

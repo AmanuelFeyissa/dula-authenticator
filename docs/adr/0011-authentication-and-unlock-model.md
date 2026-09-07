@@ -99,7 +99,7 @@ limited).
    migration.
 5. **Configurable auto-lock**: the current hardcoded 30-second background lock becomes a user
    setting (immediate / 30s / 1min / 5min / never), because a 30-second lock is right for a shared
-   bank workstation and actively annoying on a personal desktop. Default stays conservative (30s).
+   shared workstation and actively annoying on a personal desktop. Default stays conservative (30s).
 6. **PIN policy is retained but relaxed in one respect**: the existing strength rules (blocklist,
    sequential/repeating detection) still apply to PINs. The 90-day forced rotation is
    **reconsidered** — NIST SP 800-63B explicitly advises *against* mandatory periodic rotation of

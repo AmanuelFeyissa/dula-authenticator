@@ -5,7 +5,7 @@ Accepted — implemented (Phase 7)
 
 ## Context
 One of the four explicit target use cases for this project is offices that ban personal phones and
-sites that restrict cameras (many bank branches, secure government facilities, air-gapped labs).
+sites that restrict cameras (secure government facilities, trading floors, air-gapped labs).
 An authenticator whose *only* enrollment path is "scan a QR code with a camera" would be unusable
 there by definition — the enrollment flow itself needs a camera-free path, on every platform, not
 just desktop.
@@ -22,7 +22,7 @@ Two gaps were found during this review:
    unsupported** for camera scanning. The current UI shows the "Scan QR Code with Camera" button
    unconditionally on every platform, including Windows — meaning on the very platform this project
    originally shipped for, that button may never have worked, and nobody would necessarily notice
-   in a bank office where cameras are restricted and manual entry / image paste is the natural
+   in a secure office where cameras are restricted and manual entry / image paste is the natural
    workflow anyway. This needs empirical verification (does the currently-installed `mobile_scanner`
    version actually work on Windows?), not an assumption in either direction.
 2. **Clipboard image paste and drag-and-drop are only offered on desktop**, not mobile — but a

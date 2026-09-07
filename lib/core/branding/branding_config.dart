@@ -37,10 +37,6 @@ class BrandingConfig {
   /// preserved.
   final String developerName;
 
-  /// Generic label for the deployer's enterprise directory system, used in
-  /// lock-screen copy instead of naming a specific vendor product.
-  final String directorySystemLabel;
-
   const BrandingConfig({
     required this.appName,
     required this.logoAssetPath,
@@ -48,7 +44,6 @@ class BrandingConfig {
     required this.organizationName,
     required this.organizationDepartment,
     required this.developerName,
-    required this.directorySystemLabel,
   });
 
   static const String _assetPath = 'assets/branding/branding.json';
@@ -60,7 +55,6 @@ class BrandingConfig {
     organizationName: 'Your Organization',
     organizationDepartment: 'IT / Security',
     developerName: 'Amanuel Feyissa Kussa',
-    directorySystemLabel: "your organization's enterprise directory",
   );
 
   /// Loads branding from [_assetPath]. Falls back to [fallback] if the asset
@@ -81,8 +75,6 @@ class BrandingConfig {
             fallback.organizationDepartment,
         developerName:
             json['developerName'] as String? ?? fallback.developerName,
-        directorySystemLabel: json['directorySystemLabel'] as String? ??
-            fallback.directorySystemLabel,
       );
     } catch (_) {
       return fallback;

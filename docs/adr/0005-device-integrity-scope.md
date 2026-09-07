@@ -1,7 +1,9 @@
 # ADR-0005: Device-Integrity & Screen-Privacy Feature Scope
 
 ## Status
-Proposed
+Accepted — implemented. Verified on a physical Android device: the compromise screen fires on a
+developer-mode device, and screenshot blocking is strong enough that `adb screencap` returns
+nothing while the app is in the foreground.
 
 ## Context
 `AppLifecycleWrapper` currently provides two protective features, both implemented via

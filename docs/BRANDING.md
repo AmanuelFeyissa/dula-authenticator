@@ -19,8 +19,7 @@ Everything the UI displays comes from one file: **`assets/branding/branding.json
   "primarySeedColorHex": "#1D4ED8",
   "organizationName": "Acme Corporation",
   "organizationDepartment": "Information Security",
-  "developerName": "Amanuel Feyissa Kussa",
-  "directorySystemLabel": "your organization's enterprise directory"
+  "developerName": "Amanuel Feyissa Kussa"
 }
 ```
 
@@ -41,7 +40,6 @@ That's it. No source changes, no forking.
 | `organizationName` | About dialog | Your organization |
 | `organizationDepartment` | About dialog | e.g. "IT", "Information Security" |
 | `developerName` | About dialog — original author credit | **Must be retained** — see Attribution below |
-| `directorySystemLabel` | Wording in reset/recovery copy | Generic phrase for wherever your users enroll |
 
 If `branding.json` is missing or malformed, the app falls back to safe built-in defaults rather
 than failing to start — a typo in your branding file will never brick the app.
@@ -93,7 +91,7 @@ Launcher icons are generated per-platform, not read from `branding.json`. Add a
 
 ### Windows MSIX packaging
 
-No `msix_config` ships by default (the original bank-specific packaging config was removed). To
+No `msix_config` ships by default (the original deployment-specific packaging config was removed). To
 build an MSIX installer, add your own block to `pubspec.yaml`:
 
 ```yaml

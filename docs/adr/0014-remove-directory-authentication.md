@@ -1,7 +1,8 @@
 # ADR-0014: Remove Enterprise Directory Authentication Entirely
 
 ## Status
-Proposed — supersedes ADR-0003
+Accepted — implemented; supersedes ADR-0003. No LDAP/directory code remains in `lib/`, and the app
+makes no outbound network calls at all.
 
 ## Context
 ADR-0003 proposed rebuilding the app's Active Directory enrollment gate as a pluggable,
@@ -56,7 +57,7 @@ strengthening the zero-telemetry/air-gapped guarantees of ADR-0007 to "the app m
 calls at all"; deletes ~500 lines including a PowerShell script-injection surface that required
 careful escaping to be safe.
 
-**Negative:** Organizations relying on the original bank deployment's enrollment gate lose it. Given
+**Negative:** Organizations relying on the original deployment's enrollment gate lose it. Given
 the bypassability described above, what they lose is largely the appearance of a control rather
 than an effective one — but this should be stated plainly to any such adopter rather than glossed.
 

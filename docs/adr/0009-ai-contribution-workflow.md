@@ -1,10 +1,10 @@
 # ADR-0009: AI-Assisted Contribution Workflow (CLAUDE.md, ADRs, Security-Review Skill)
 
 ## Status
-Proposed
+Accepted — implemented (`CLAUDE.md`, `docs/adr/`, `.claude/skills/`).
 
 ## Context
-This project is being prepared for contributions from people outside the original bank team,
+This project is being prepared for contributions from people outside the original team,
 plausibly using AI coding assistants (Claude Code among them) at very different levels of context
 about the project's history and security constraints than the original authors had. Two risks
 follow directly from that:
@@ -26,8 +26,8 @@ constraints discoverable without a human having to paste them in every time. A p
 under `.claude/skills/` is the mechanism for encoding a *repeatable checklist* (not just narrative
 context) that should run specifically when security-sensitive files are touched — this addresses
 risk 2. Both must be **self-contained within this repository** and must not assume any particular
-person's private Claude Code plugin set is installed, since external contributors will not have
-this bank's internal tooling — a constraint that ruled out relying on any organization-specific
+person's private Claude Code plugin set is installed, since external contributors will not have any
+one organization's internal tooling — a constraint that ruled out relying on organization-specific
 skill/agent infrastructure for this project's own guidance.
 
 ## Decision

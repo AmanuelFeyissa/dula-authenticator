@@ -4,8 +4,8 @@ import 'package:dula_auth/core/branding/branding_config.dart';
 
 /// Shows the deployer-configured logo image if [BrandingConfig.logoAssetPath]
 /// is set, otherwise falls back to a generic shield icon so the app never
-/// ships a placeholder image asset of its own (see ADR-0002 - the original
-/// bank's logo is not redistributed with this open-source project).
+/// ships a placeholder image asset of its own (see ADR-0002 - no third-party
+/// logo is redistributed with this open-source project).
 class BrandedLogo extends ConsumerWidget {
   final double size;
   final Color? fallbackColor;

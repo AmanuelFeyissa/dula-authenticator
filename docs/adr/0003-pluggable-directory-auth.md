@@ -90,7 +90,7 @@ because `dartdap` is "just a library."
   for organizations without external IdP reachability) and not something the current PowerShell
   code does today; tracked as a possible future ADR/extension point, not part of this migration.
 - **Drop directory auth entirely as out of scope for an open-source project** — rejected: several
-  of the project's actual target adopters (banks, enterprises) specifically want directory-gated
+  of the project's actual target adopters (regulated enterprises) specifically want directory-gated
   enrollment; removing it would drop a real differentiator versus generic consumer authenticator
   apps (Aegis, 2FAS, Ente Auth) that have no such concept.
 
