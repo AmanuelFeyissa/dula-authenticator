@@ -1,8 +1,10 @@
 # ADR-0017: Linux Secure-Storage Calls Can Freeze the Dart Isolate
 
 ## Status
-Accepted — canary moved to a background isolate; the app-level freeze is
-localised but not yet closed (see Update below)
+Superseded by ADR-0018 — the open item below (an `IsolatedSecretStore`) was investigated and
+found unable to work: the plugin blocks the *platform thread*, which on desktop hosts the Dart UI
+isolate, so no isolate boundary can help. ADR-0018 records the mechanism and the fix that does
+work (a D-Bus availability gate in front of every call). The timeout from Decision 1 stays.
 
 ## Context
 ADR-0004 added `SecureStorageCanary.check()` so a missing Linux keyring daemon fails loudly at

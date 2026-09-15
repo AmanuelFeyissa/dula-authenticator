@@ -79,7 +79,8 @@ Current ADR index (see each file for full context/decision/consequences):
 | [0014](docs/adr/0014-remove-directory-authentication.md) | Enterprise directory auth removed entirely (supersedes 0003) |
 | [0015](docs/adr/0015-account-management.md) | Tags (not a single folder), favorites as a filter, no explicit sort field, corrupt-account isolation |
 | [0016](docs/adr/0016-deployment-configuration.md) | `assets/config/deployment_config.json` centralizes security-policy/product hardcodes (PIN length, Argon2id cost, lockout, auto-lock/rotation defaults, backup naming), separate from `branding.json` |
-| [0017](docs/adr/0017-linux-secure-storage-isolate-freeze.md) | A no-keyring `flutter_secure_storage_linux` call can freeze the Dart isolate; canary timeout added but the full fix (background isolate) is deferred |
+| [0017](docs/adr/0017-linux-secure-storage-isolate-freeze.md) | ~~A no-keyring `flutter_secure_storage_linux` call can freeze the Dart isolate; fix deferred~~ — **superseded by ADR-0018** |
+| [0018](docs/adr/0018-linux-secret-service-gate.md) | The freeze is a synchronous libsecret call on the platform thread; every Linux `SecretStore` call is gated behind a bounded D-Bus check for `org.freedesktop.secrets`, and an unreachable store is surfaced as the ADR-0004 blocking screen, never as first-run |
 
 ## Attribution — hard constraint
 

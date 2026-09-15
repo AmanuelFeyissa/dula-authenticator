@@ -11,6 +11,7 @@ import 'package:dula_auth/core/branding/branding_config.dart';
 import 'package:dula_auth/core/config/deployment_config.dart';
 import 'package:dula_auth/features/accounts/screens/add_account_screen.dart';
 import 'package:dula_auth/features/settings/screens/settings_screen.dart';
+import 'package:dula_auth/features/accounts/enrollment_capabilities.dart';
 
 /// The account list: search, tag/favorite filtering, manual reordering, and
 /// per-account actions (edit, favorite, tags, delete).
@@ -352,9 +353,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Scan a QR code to begin',
-            style: TextStyle(color: Colors.white54),
+          // Only suggest scanning where a scanner exists (ADR-0006); on
+          // desktop the paths are clipboard, drag-and-drop, and typing.
+          Text(
+            EnrollmentCapabilities.cameraScanning
+                ? 'Scan a QR code to begin'
+                : 'Paste a QR image or enter a key to begin',
+            style: const TextStyle(color: Colors.white54),
           ),
         ],
       ),

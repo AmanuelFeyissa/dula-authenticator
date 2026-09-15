@@ -32,8 +32,11 @@ Run this checklist before approving or merging any change touching:
       counters, auto-lock preference) may legitimately use `SharedPreferences`, as they already do —
       the test is whether the value could authenticate a user or decrypt data.
 - [ ] Linux storage paths respect ADR-0004: no silent fallback to a weaker custom store when the OS
-      keyring is unavailable. Failure must be surfaced, not swallowed. Note the open gap in
-      ADR-0017 before adding new startup-path storage calls.
+      keyring is unavailable. Failure must be surfaced, not swallowed.
+- [ ] No code constructs `FlutterSecretStore` directly — every production store comes from
+      `secretStoreProvider`, so it sits behind the Linux D-Bus gate (ADR-0018). A
+      `SecretStoreUnavailableException` is never caught and turned into "no value": an unreadable
+      vault must not look like an empty one.
 
 **Cryptography**
 - [ ] No hand-rolled crypto primitive where `package:cryptography` (Argon2id, AES-GCM) already has

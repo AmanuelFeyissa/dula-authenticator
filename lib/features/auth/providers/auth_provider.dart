@@ -4,12 +4,14 @@ import 'package:dula_auth/core/security/credential_kind.dart';
 import 'package:dula_auth/core/security/credential_policy.dart';
 import 'package:dula_auth/core/security/lockout_policy.dart';
 import 'package:dula_auth/core/settings/app_settings.dart';
+import 'package:dula_auth/core/vault/secret_store.dart';
+import 'package:dula_auth/core/vault/secret_store_provider.dart';
 import 'package:dula_auth/features/auth/repositories/auth_repository.dart';
 import 'package:dula_auth/features/home/providers/home_provider.dart';
 import 'package:dula_auth/features/settings/providers/settings_provider.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepository();
+  return AuthRepository(store: ref.watch(secretStoreProvider));
 });
 
 final authStateProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
@@ -38,6 +40,11 @@ class AuthState {
   /// The expired credential has been verified, so a replacement may be set.
   final bool isVerifiedForRotation;
 
+  /// The credential store could not be reached, so nothing about the vault
+  /// is known. Deliberately separate from [isSetupRequired]: an unreadable
+  /// vault must never be shown as an empty one (ADR-0018).
+  final bool isStorageUnavailable;
+
   final int failedAttempts;
   final DateTime? lockoutUntil;
   final DateTime? lastSetDate;
@@ -50,6 +57,7 @@ class AuthState {
     this.biometricsAvailable = false,
     this.isCredentialExpired = false,
     this.isVerifiedForRotation = false,
+    this.isStorageUnavailable = false,
     this.failedAttempts = 0,
     this.lockoutUntil,
     this.lastSetDate,
@@ -66,6 +74,7 @@ class AuthState {
     bool? biometricsAvailable,
     bool? isCredentialExpired,
     bool? isVerifiedForRotation,
+    bool? isStorageUnavailable,
     int? failedAttempts,
     DateTime? lockoutUntil,
     DateTime? lastSetDate,
@@ -84,6 +93,7 @@ class AuthState {
       isVerifiedForRotation: clearRotation
           ? false
           : (isVerifiedForRotation ?? this.isVerifiedForRotation),
+      isStorageUnavailable: isStorageUnavailable ?? this.isStorageUnavailable,
       failedAttempts: failedAttempts ?? this.failedAttempts,
       lockoutUntil: clearLockout ? null : (lockoutUntil ?? this.lockoutUntil),
       lastSetDate: lastSetDate ?? this.lastSetDate,
@@ -108,7 +118,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repository;
   final Ref _ref;
 
-  late final Future<void> _ready;
+  late Future<void> _ready;
 
   AuthNotifier(this._repository, this._ref)
       : super(AuthState(isLocked: true, isSetupRequired: false)) {
@@ -117,6 +127,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   /// Completes once startup state has been read from the device.
   Future<void> get ready => _ready;
+
+  /// Re-runs the startup read after the credential store was reported
+  /// unreachable — the RETRY button on the ADR-0004 blocking screen.
+  Future<void> retryStartup() {
+    state = state.copyWith(isStorageUnavailable: false);
+    return _ready = _checkInitialState();
+  }
 
   /// The settings this notifier is currently operating under.
   AppSettings get settings => _ref.read(settingsProvider);
@@ -127,7 +144,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
     // how the app ends up enforcing a policy nobody enabled.
     await _ref.read(settingsProvider.notifier).ready;
 
-    final hasCredential = await _repository.hasCredential();
+    final bool hasCredential;
+    try {
+      hasCredential = await _repository.hasCredential();
+    } on SecretStoreUnavailableException {
+      // Not "no credential": the answer is unknowable. Stay locked and let
+      // the lifecycle wrapper show the storage-unavailable screen rather
+      // than offering first-run setup over a vault that may well exist.
+      state = state.copyWith(
+        isLocked: true,
+        isSetupRequired: false,
+        isStorageUnavailable: true,
+      );
+      return;
+    }
     final biometricsAvailable = await _repository.canUseBiometrics();
 
     if (!hasCredential) {

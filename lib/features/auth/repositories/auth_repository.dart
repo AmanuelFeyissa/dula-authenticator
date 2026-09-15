@@ -41,12 +41,15 @@ class AuthRepository {
   /// storage, and no stronger (ADR-0011, docs/SECURITY_MODEL.md).
   static const String masterKeyKey = 'mfa_biometric_master_key';
 
+  /// [store] is required rather than defaulted so every production
+  /// repository is built from `secretStoreProvider` and sits behind the
+  /// Linux availability gate (ADR-0018).
   AuthRepository({
-    SecretStore? store,
+    required SecretStore store,
     VaultService? vault,
     BiometricAuthenticator? biometrics,
-  })  : _store = store ?? const FlutterSecretStore(),
-        _vault = vault ?? VaultService(store ?? const FlutterSecretStore()),
+  })  : _store = store,
+        _vault = vault ?? VaultService(store),
         _biometrics = biometrics ?? LocalAuthBiometrics();
 
   VaultService get vault => _vault;

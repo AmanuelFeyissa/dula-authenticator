@@ -7,6 +7,7 @@ import 'package:dula_auth/core/models/otp_account.dart';
 import 'package:dula_auth/core/repositories/account_repository.dart';
 import 'package:dula_auth/core/security/biometric_authenticator.dart';
 import 'package:dula_auth/core/security/credential_kind.dart';
+import 'package:dula_auth/core/vault/gated_secret_store.dart';
 import 'package:dula_auth/core/vault/secret_store.dart';
 import 'package:dula_auth/core/vault/vault_service.dart';
 import 'package:dula_auth/features/auth/providers/auth_provider.dart';
@@ -417,6 +418,49 @@ void main() {
       final cached = await repository.getStoredMasterKey();
       final expected = (await vault.unlock(strongPassphrase)).key;
       expect(cached, expected);
+    });
+  });
+
+  group('unreachable credential store (ADR-0018)', () {
+    /// A store whose backend is absent, as on Linux with no Secret Service.
+    /// The vault behind it is *not* empty — that is the whole point.
+    late SecretStoreGate gate;
+    late bool serviceUp;
+
+    setUp(() async {
+      // Provision a real vault first, then put a closed gate in front of it.
+      await vault.initialize(strongPin, kind: CredentialKind.pin);
+      serviceUp = false;
+      gate = SecretStoreGate(() async => serviceUp);
+      final gated = GatedSecretStore(store, gate);
+      repository = AuthRepository(
+        store: gated,
+        vault: VaultService(gated, params: testParams),
+        biometrics: biometrics,
+      );
+    });
+
+    test('reports storage unavailable instead of falling into first-run '
+        'setup over the existing vault', () async {
+      final auth = await notifierFrom(buildContainer());
+
+      expect(auth.state.isStorageUnavailable, isTrue);
+      expect(auth.state.isSetupRequired, isFalse,
+          reason: 'an unreadable vault must never look like no vault');
+      expect(auth.state.isLocked, isTrue);
+    });
+
+    test('retryStartup() recovers once the service is reachable', () async {
+      final auth = await notifierFrom(buildContainer());
+      expect(auth.state.isStorageUnavailable, isTrue);
+
+      serviceUp = true;
+      gate.reset();
+      await auth.retryStartup();
+
+      expect(auth.state.isStorageUnavailable, isFalse);
+      expect(auth.state.isSetupRequired, isFalse);
+      expect(auth.state.credentialKind, CredentialKind.pin);
     });
   });
 }

@@ -12,6 +12,22 @@ abstract class SecretStore {
   Future<void> delete(String key);
 }
 
+/// The platform credential store cannot be reached at all.
+///
+/// Distinct from a read that returns `null`: `null` means "nothing stored
+/// under this key", which the auth flow reads as first-run. This means "the
+/// answer is unknowable right now", and must never be collapsed into "no
+/// credential" — that would drop a user into setup over an existing vault
+/// (ADR-0018). Callers on the startup path surface it as the ADR-0004
+/// blocking screen instead.
+class SecretStoreUnavailableException implements Exception {
+  final String message;
+  const SecretStoreUnavailableException(this.message);
+
+  @override
+  String toString() => 'SecretStoreUnavailableException: $message';
+}
+
 /// Production [SecretStore] backed by the platform credential store
 /// (Windows Credential Manager, Android Keystore, iOS/macOS Keychain,
 /// libsecret on Linux — see ADR-0004).

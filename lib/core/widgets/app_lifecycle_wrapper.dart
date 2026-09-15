@@ -6,8 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:screen_protector/screen_protector.dart';
 import 'package:root_checker_plus/root_checker_plus.dart';
 import 'package:dula_auth/core/branding/branding_config.dart';
-import 'package:dula_auth/core/security/isolated_secure_storage_probe.dart';
 import 'package:dula_auth/core/security/secure_storage_canary.dart';
+import 'package:dula_auth/core/vault/secret_store_provider.dart';
 import 'package:dula_auth/features/auth/providers/auth_provider.dart';
 import 'package:dula_auth/features/auth/screens/app_lock_screen.dart';
 import 'package:dula_auth/features/auth/screens/credential_setup_screen.dart';
@@ -15,13 +15,13 @@ import 'package:dula_auth/features/settings/providers/settings_provider.dart';
 
 /// How the startup secure-storage check runs.
 ///
-/// The default runs the ADR-0004 canary on a background isolate (ADR-0017),
-/// because a no-keyring libsecret call on Linux blocks whichever isolate makes
-/// it — including the timer that would otherwise time it out. Overridden in
-/// tests with an in-process check against a fake store, so the blocking-error
-/// screen can be exercised without a real platform channel.
+/// The default runs the ADR-0004 canary through the same gated store the rest
+/// of the app uses (ADR-0018): with no Secret Service on the bus the gate
+/// throws before libsecret is ever entered, so the canary fails fast instead
+/// of freezing the platform thread. Overridden in tests with an in-process
+/// check against a fake store.
 final secureStorageProbeProvider = Provider<Future<bool> Function()>(
-  (ref) => IsolatedSecureStorageProbe.run,
+  (ref) => () => SecureStorageCanary.check(ref.read(secretStoreProvider)),
 );
 
 class AppLifecycleWrapper extends ConsumerStatefulWidget {
@@ -126,6 +126,8 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
       }
     } else if (state == AppLifecycleState.resumed) {
       _lockTimer?.cancel();
+      // A keyring may have been started (or stopped) while we were away.
+      ref.read(secretStoreGateProvider).reset();
     }
   }
 
@@ -134,11 +136,11 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
     if (_isDeviceCompromised) {
       return _buildCompromisedWarning();
     }
-    if (_secureStorageUnavailable) {
+    final authState = ref.watch(authStateProvider);
+    if (_secureStorageUnavailable || authState.isStorageUnavailable) {
       return _buildSecureStorageUnavailableWarning();
     }
 
-    final authState = ref.watch(authStateProvider);
     final branding = ref.watch(brandingConfigProvider);
 
     // Three gates, in order of precedence: create a credential, replace an
@@ -201,9 +203,10 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
               ),
               const SizedBox(height: 16),
               const Text(
-                'This system has no accessible secure credential store — '
-                'install and enable gnome-keyring or kwallet, or contact '
-                'your IT administrator. Continuing without one risks PINs, '
+                'This system has no accessible, unlocked credential store — '
+                'install and enable gnome-keyring or kwallet, make sure its '
+                'default keyring is unlocked, or contact your IT '
+                'administrator. Continuing without one risks PINs, '
                 'passphrases, and TOTP secrets that are not actually saved.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 15),
@@ -214,8 +217,10 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
                 children: [
                   OutlinedButton(
                     onPressed: () {
+                      ref.read(secretStoreGateProvider).reset();
                       setState(() => _secureStorageUnavailable = false);
                       _checkSecureStorage();
+                      ref.read(authStateProvider.notifier).retryStartup();
                     },
                     child: const Text('RETRY'),
                   ),

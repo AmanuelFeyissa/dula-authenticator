@@ -7,9 +7,9 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3.41-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20Web%20%7C%20Linux-informational)](#platform-status)
-[![Tests](https://img.shields.io/badge/tests-319%20unit%20%2B%2031%20e2e-success)](#testing)
+[![Tests](https://img.shields.io/badge/tests-337%20unit%20%2B%2033%20e2e-success)](#testing)
 [![Telemetry](https://img.shields.io/badge/telemetry-none-critical)](docs/adr/0007-air-gapped-operability.md)
-[![ADRs](https://img.shields.io/badge/ADRs-17-8A2BE2)](docs/adr/)
+[![ADRs](https://img.shields.io/badge/ADRs-18-8A2BE2)](docs/adr/)
 
 <img src="docs/screenshots/05-home-codes.png" alt="Dula Authenticator on Windows — live TOTP codes with countdown rings, tags, and a favourite" width="720">
 
@@ -220,7 +220,7 @@ Captured from the Windows release build. Every secret shown is a throwaway demo 
 | **Windows** | ✅ Complete | Full unit + end-to-end suite runs here |
 | **Android** | ✅ Complete | Verified on physical hardware — biometric unlock, camera enrollment, screenshot blocking |
 | **Web** | ✅ Complete | Runs offline; see caveat below |
-| **Linux** | 🚧 In progress | Builds and passes the full E2E suite, but a missing keyring daemon hangs startup instead of showing the intended error ([ADR-0017](docs/adr/0017-linux-secure-storage-isolate-freeze.md)) |
+| **Linux** | ✅ Complete | Full E2E suite passes under Xvfb; a missing keyring daemon now shows the intended error within seconds instead of hanging ([ADR-0018](docs/adr/0018-linux-secret-service-gate.md)). Packaging (AppImage / .deb / .rpm) is the next phase |
 | **iOS** | 📦 Scaffolded | Not built or tested — needs macOS + Xcode |
 | **macOS** | 📦 Scaffolded | Not built or tested — needs macOS + Xcode |
 
@@ -233,8 +233,8 @@ Captured from the Windows release build. Every secret shown is a throwaway demo 
 
 | Suite | Count | Runs on |
 |---|:---:|---|
-| Unit / widget | **319** | Windows, Linux |
-| End-to-end (`integration_test`) | **31** | Windows, Linux |
+| Unit / widget | **337** | Windows, Linux |
+| End-to-end (`integration_test`) | **31** + 2 Linux-only keyring proofs | Windows, Linux |
 
 The end-to-end suite drives the real app: creating a vault, unlocking at production Argon2id cost,
 generating codes for every OTP type, importing backups, and verifying that secrets are unreadable
@@ -279,7 +279,7 @@ lib/
     ├── accounts/  auth/  backup/  home/  settings/
 
 docs/
-├── adr/                       # 17 Architecture Decision Records
+├── adr/                       # 18 Architecture Decision Records
 ├── SECURITY_MODEL.md          # threat model + per-platform capability matrix
 ├── CONFIGURATION.md           # every deployer-tunable setting
 └── BRANDING.md                # re-skinning without touching Dart
@@ -290,11 +290,14 @@ docs/
 Every non-trivial decision is written down as an [Architecture Decision Record](docs/adr/) —
 including the ones that turned out to be wrong.
 
-[ADR-0017](docs/adr/0017-linux-secure-storage-isolate-freeze.md) is the one worth reading: real
-Linux testing found that a missing keyring doesn't just fail, it *freezes the Dart isolate*. The
-obvious fix — a timeout — was built, shipped, and then proven insufficient by a heartbeat timer that
-stopped ticking anyway. The ADR records the failed fix and exactly why, instead of quietly deleting
-the mistake.
+[ADR-0017](docs/adr/0017-linux-secure-storage-isolate-freeze.md) and
+[ADR-0018](docs/adr/0018-linux-secret-service-gate.md) are the pair worth reading. Real Linux
+testing found that a missing keyring doesn't just fail, it *freezes the app*. A timeout was built
+and proven insufficient by a heartbeat timer that stopped ticking anyway; a background-isolate
+probe was built and proven insufficient too. Reading the plugin's C++ explained both: it makes a
+*synchronous* libsecret call on the platform thread — the thread the Dart UI isolate lives on. The
+fix that works asks D-Bus whether the service exists *before* ever calling into it. Both failed
+attempts stay in the record, with the reason each could not have worked.
 
 Further reading: [SECURITY_MODEL.md](docs/SECURITY_MODEL.md) ·
 [CONFIGURATION.md](docs/CONFIGURATION.md) · [BRANDING.md](docs/BRANDING.md) ·

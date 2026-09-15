@@ -1,10 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dula_auth/core/models/otp_account.dart';
 import 'package:dula_auth/core/repositories/account_repository.dart';
+import 'package:dula_auth/core/vault/secret_store_provider.dart';
 import 'package:dula_auth/features/auth/providers/auth_provider.dart';
 
 final accountRepositoryProvider = Provider<AccountRepository>((ref) {
-  return AccountRepository();
+  return AccountRepository(store: ref.watch(secretStoreProvider));
 });
 
 class AccountListNotifier extends StateNotifier<AsyncValue<List<OtpAccount>>> {

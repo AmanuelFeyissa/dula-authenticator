@@ -11,9 +11,11 @@ class AccountRepository {
 
   static const String _accountsKey = VaultService.accountsKey;
 
-  AccountRepository({SecretStore? store, VaultService? vault})
-      : _store = store ?? const FlutterSecretStore(),
-        _vault = vault ?? VaultService(store ?? const FlutterSecretStore());
+  /// [store] is required so the production repository is always built from
+  /// `secretStoreProvider` and sits behind the Linux gate (ADR-0018).
+  AccountRepository({required SecretStore store, VaultService? vault})
+      : _store = store,
+        _vault = vault ?? VaultService(store);
 
   /// Loads all accounts, decrypting secrets when [masterKey] is supplied.
   ///
