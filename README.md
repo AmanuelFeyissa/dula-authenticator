@@ -11,7 +11,9 @@
 [![Telemetry](https://img.shields.io/badge/telemetry-none-critical)](docs/adr/0007-air-gapped-operability.md)
 [![ADRs](https://img.shields.io/badge/ADRs-17-8A2BE2)](docs/adr/)
 
-<img src="docs/screenshots/01-setup-choice.png" alt="Dula Authenticator — choosing between a PIN and a passphrase at first run" width="720">
+<img src="docs/screenshots/05-home-codes.png" alt="Dula Authenticator on Windows — live TOTP codes with countdown rings, tags, and a favourite" width="720">
+
+<sub>Windows desktop build. All accounts shown use throwaway demo secrets.</sub>
 
 </div>
 
@@ -32,6 +34,17 @@ is built for the cases where that assumption breaks.
 | **Offices banning phones or cameras** | Manual secret entry works on *every* platform; QR images can be pasted or dragged in where the OS supports it ([ADR-0006](docs/adr/0006-no-camera-enrollment-parity.md)) |
 | **Desktop-first users** | Windows, Linux, and macOS are real targets, not afterthoughts |
 | **Self-deployers** | App name, logo, colours, and security policy live in JSON — re-skinning needs no Dart changes ([BRANDING.md](docs/BRANDING.md), [CONFIGURATION.md](docs/CONFIGURATION.md)) |
+
+The camera-free claim, shown rather than stated — this is the desktop enrollment screen. A QR image
+pasted from the clipboard fills the form on the left; the same form accepts a typed secret, with the
+OTP type, algorithm, digits, and period/counter all editable, on the right.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/07-add-paste-qr.png" alt="Add Account — QR image pasted from clipboard, fields populated, confirmation toast"></td>
+<td width="50%"><img src="docs/screenshots/08-add-manual-advanced.png" alt="Add Account — manual entry with advanced options expanded"></td>
+</tr>
+</table>
 
 ## Architecture
 
@@ -147,6 +160,56 @@ sequenceDiagram
 
 </td></tr>
 </table>
+
+## Screenshots
+
+Captured from the Windows release build. Every secret shown is a throwaway demo value.
+
+<details open>
+<summary><strong>First run and unlocking</strong></summary>
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/01-setup-choice.png" alt="Choose PIN or passphrase"><br><sub>Choose a PIN or a passphrase at first run — changeable later without losing accounts (ADR-0011)</sub></td>
+<td width="50%"><img src="docs/screenshots/02-passphrase-policy.png" alt="Weak passphrase rejected"><br><sub>Policy is enforced before anything is stored; the strength meter is advisory, the length rule is not</sub></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/03-biometric-optin.png" alt="Biometric opt-in"><br><sub>Biometrics are opt-in and never the only way in — the credential always keeps working</sub></td>
+<td><img src="docs/screenshots/04-lock-screen.png" alt="Lock screen"><br><sub>Unlock screen. Wrong attempts escalate into a lockout with backoff</sub></td>
+</tr>
+</table>
+</details>
+
+<details>
+<summary><strong>Codes and account management</strong></summary>
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/06-otp-types.png" alt="8-digit TOTP, Steam Guard, and HOTP side by side"><br><sub>One list, three generators: 8-digit TOTP, Steam Guard's 5-character alphabet, and counter-based HOTP with an advance button (ADR-0012)</sub></td>
+<td width="50%"><img src="docs/screenshots/09-account-menu.png" alt="Per-account menu"><br><sub>Per-account: favourite, tags, edit. Drag handle on the right for reordering (ADR-0015)</sub></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/10-search.png" alt="Search"><br><sub>Search matches issuer, account name, or tag; favourite and tag filters as chips</sub></td>
+<td><img src="docs/screenshots/11-edit-account.png" alt="Edit account"><br><sub>Editing an existing account, including its OTP parameters — no delete-and-re-add</sub></td>
+</tr>
+</table>
+</details>
+
+<details>
+<summary><strong>Settings, backup, and import</strong></summary>
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/12-settings.png" alt="Settings — unlocking and auto-lock"><br><sub>Biometrics toggle, credential change, auto-lock. The forced-rotation option ships off, with the NIST reasoning printed next to it</sub></td>
+<td width="50%"><img src="docs/screenshots/13-settings-backup-about.png" alt="Settings — backup, about, danger zone"><br><sub>Backup, attribution, and a clearly separated danger zone</sub></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/14-import-sources.png" alt="Import sources"><br><sub>Import from an <code>otpauth://</code> or Google Authenticator migration code, or from a file exported by this app, Aegis, or 2FAS</sub></td>
+<td><img src="docs/screenshots/15-import-review.png" alt="Import review"><br><sub>Source detected automatically; every account is reviewed and selectable before anything touches the vault (ADR-0013)</sub></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/16-backup-export.png" alt="Encrypted backup export"><br><sub>Export uses its own passphrase, separate from the unlock credential, and explains why</sub></td>
+<td><img src="docs/screenshots/17-about.png" alt="About dialog"><br><sub>About dialog — version, author, license</sub></td>
+</tr>
+</table>
+</details>
 
 ## Platform status
 
