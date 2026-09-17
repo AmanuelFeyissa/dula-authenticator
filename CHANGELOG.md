@@ -88,6 +88,11 @@ reasoning behind each decision is in [`docs/adr/`](docs/adr/).
 - **The Linux `.rpm` installed and then crashed.** `libepoxy` dlopens the GL
   libraries, so no dependency generator could see them; found by installing on
   a minimal Fedora rather than on a machine that already had a GL stack.
+- **The lock screen could crash while the biometric prompt was in flight.** It
+  read a provider between two `await`s, so anything replacing the screen in
+  that window left the resumed code touching a disposed `ref`. Most visible on
+  Linux, where the storage-unavailable screen takes over mid-prompt, but the
+  race existed on every platform.
 - The home screen no longer tells desktop users to "scan a QR code" on
   platforms with no camera support.
 
