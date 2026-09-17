@@ -121,6 +121,11 @@ flutter test
 flutter build windows --debug   # or: android, ios (macOS/Xcode only), web, linux
 ```
 
+Linux packages (AppImage, `.deb`, `.rpm`) are built by
+`./packaging/linux/build-packages.sh` after `flutter build linux --release`; see ADR-0008. Cutting
+a release is documented in [`docs/RELEASING.md`](docs/RELEASING.md) — tag `v*` and the release
+workflow builds, SBOMs, checksums and signs everything.
+
 Platform notes: `ios` builds require macOS/Xcode and cannot be built or run on Windows or Linux.
 `android` requires the Android SDK with cmdline-tools and accepted licenses. `linux` requires
 `libsecret` (and a running keyring service — see ADR-0004) at runtime for secure storage to work.

@@ -149,13 +149,17 @@ jobs:
             packaging/linux/com.dulaauth.totp.metainfo.xml
 
       # Prove the packages are real, not merely present.
+      #
+      # `sed -n` rather than `head`: under `pipefail`, head exits at its line
+      # limit, the producer takes SIGPIPE, and the step fails despite nothing
+      # being wrong. sed drains the stream instead.
       - name: Inspect the packages
         run: |
           set -euo pipefail
           dpkg-deb --info dist/*.deb
-          dpkg-deb --contents dist/*.deb | head -20
+          dpkg-deb --contents dist/*.deb | sed -n '1,20p'
           rpm -qip dist/*.rpm
-          rpm -qlp dist/*.rpm | head -20
+          rpm -qlp dist/*.rpm | sed -n '1,20p'
 
       - name: Smoke-test the AppImage
         run: |
