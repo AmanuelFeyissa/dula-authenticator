@@ -14,8 +14,8 @@ class AccountRepository {
   /// [store] is required so the production repository is always built from
   /// `secretStoreProvider` and sits behind the Linux gate (ADR-0018).
   AccountRepository({required SecretStore store, VaultService? vault})
-      : _store = store,
-        _vault = vault ?? VaultService(store);
+    : _store = store,
+      _vault = vault ?? VaultService(store);
 
   /// Loads all accounts, decrypting secrets when [masterKey] is supplied.
   ///
@@ -44,11 +44,14 @@ class AccountRepository {
       }
       final plaintext = await _vault.decryptSecret(account.secret, masterKey);
       if (plaintext == null) {
-        result.add(account.copyWith(
-          loadError: 'Could not decrypt this account\'s secret. The vault '
-              'may be corrupted, or this account was written by a different '
-              'installation.',
-        ));
+        result.add(
+          account.copyWith(
+            loadError:
+                'Could not decrypt this account\'s secret. The vault '
+                'may be corrupted, or this account was written by a different '
+                'installation.',
+          ),
+        );
         continue;
       }
       result.add(account.copyWith(secret: plaintext));

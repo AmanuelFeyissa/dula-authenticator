@@ -72,8 +72,10 @@ class AppSettings {
   }) {
     defaultAutoLock = autoLock ?? defaultAutoLock;
     defaultRotationDays = rotationDays ?? defaultRotationDays;
-    AppSettings.minRotationDays = minRotationDays ?? AppSettings.minRotationDays;
-    AppSettings.maxRotationDays = maxRotationDays ?? AppSettings.maxRotationDays;
+    AppSettings.minRotationDays =
+        minRotationDays ?? AppSettings.minRotationDays;
+    AppSettings.maxRotationDays =
+        maxRotationDays ?? AppSettings.maxRotationDays;
   }
 
   /// Restores the historical defaults. Test-only — call in `tearDown` after
@@ -108,8 +110,8 @@ class AppSettings {
     this.biometricUnlockEnabled = false,
     this.credentialRotationEnabled = false,
     int? credentialRotationDays,
-  })  : autoLock = autoLock ?? defaultAutoLock,
-        credentialRotationDays = credentialRotationDays ?? defaultRotationDays;
+  }) : autoLock = autoLock ?? defaultAutoLock,
+       credentialRotationDays = credentialRotationDays ?? defaultRotationDays;
 
   /// Whether a credential set on [lastSet] must now be rotated.
   ///
@@ -140,11 +142,11 @@ class AppSettings {
   }
 
   Map<String, Object?> toMap() => {
-        'autoLock': autoLock.name,
-        'biometricUnlockEnabled': biometricUnlockEnabled,
-        'credentialRotationEnabled': credentialRotationEnabled,
-        'credentialRotationDays': credentialRotationDays,
-      };
+    'autoLock': autoLock.name,
+    'biometricUnlockEnabled': biometricUnlockEnabled,
+    'credentialRotationEnabled': credentialRotationEnabled,
+    'credentialRotationDays': credentialRotationDays,
+  };
 
   /// Reads stored settings. Every field falls back to its default rather than
   /// throwing, so a partially written or hand-edited store still yields a
@@ -160,8 +162,9 @@ class AppSettings {
     final rawRotation = map['credentialRotationEnabled'];
 
     return AppSettings(
-      autoLock:
-          AutoLockDelay.fromName(rawAutoLock is String ? rawAutoLock : null),
+      autoLock: AutoLockDelay.fromName(
+        rawAutoLock is String ? rawAutoLock : null,
+      ),
       biometricUnlockEnabled: rawBiometrics is bool ? rawBiometrics : false,
       credentialRotationEnabled: rawRotation is bool ? rawRotation : false,
       credentialRotationDays: days.clamp(minRotationDays, maxRotationDays),
@@ -178,9 +181,9 @@ class AppSettings {
 
   @override
   int get hashCode => Object.hash(
-        autoLock,
-        biometricUnlockEnabled,
-        credentialRotationEnabled,
-        credentialRotationDays,
-      );
+    autoLock,
+    biometricUnlockEnabled,
+    credentialRotationEnabled,
+    credentialRotationDays,
+  );
 }

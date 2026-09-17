@@ -15,11 +15,15 @@ class CommandResult {
 /// Runs [executable] with [args], killing it and throwing [TimeoutException]
 /// if it has not exited within [timeout]. Throws [ProcessException] when the
 /// executable does not exist.
+// Hand-grouped: the tall style pushes this signature onto an extra indent
+// level, which reads worse.
+// dart format off
 typedef CommandRunner = Future<CommandResult> Function(
   String executable,
   List<String> args, {
   required Duration timeout,
 });
+// dart format on
 
 /// Asks the D-Bus session bus whether a Secret Service is reachable, without
 /// ever touching libsecret.
@@ -83,15 +87,17 @@ class LinuxSecretServiceProbe {
   /// `true`/`false` from the bus, or `null` when no tool could ask.
   Future<bool?> _nameHasOwner() async {
     try {
-      final r = await _run(
-        'gdbus',
-        [
-          'call', '--session',
-          '--dest', _busDest, '--object-path', _busPath,
-          '--method', '$_busDest.NameHasOwner', secretsBusName,
-        ],
-        timeout: queryTimeout,
-      );
+      final r = await _run('gdbus', [
+        'call',
+        '--session',
+        '--dest',
+        _busDest,
+        '--object-path',
+        _busPath,
+        '--method',
+        '$_busDest.NameHasOwner',
+        secretsBusName,
+      ], timeout: queryTimeout);
       // A failed call here means no session bus at all — nothing to activate.
       if (r.exitCode != 0) return false;
       return r.stdout.contains('true');
@@ -102,14 +108,14 @@ class LinuxSecretServiceProbe {
     }
 
     try {
-      final r = await _run(
-        'dbus-send',
-        [
-          '--session', '--print-reply', '--dest=$_busDest', _busPath,
-          '$_busDest.NameHasOwner', 'string:$secretsBusName',
-        ],
-        timeout: queryTimeout,
-      );
+      final r = await _run('dbus-send', [
+        '--session',
+        '--print-reply',
+        '--dest=$_busDest',
+        _busPath,
+        '$_busDest.NameHasOwner',
+        'string:$secretsBusName',
+      ], timeout: queryTimeout);
       if (r.exitCode != 0) return false;
       return r.stdout.contains('boolean true');
     } on ProcessException {
@@ -121,15 +127,18 @@ class LinuxSecretServiceProbe {
 
   Future<bool> _startService() async {
     try {
-      final r = await _run(
-        'gdbus',
-        [
-          'call', '--session',
-          '--dest', _busDest, '--object-path', _busPath,
-          '--method', '$_busDest.StartServiceByName', secretsBusName, '0',
-        ],
-        timeout: activationTimeout,
-      );
+      final r = await _run('gdbus', [
+        'call',
+        '--session',
+        '--dest',
+        _busDest,
+        '--object-path',
+        _busPath,
+        '--method',
+        '$_busDest.StartServiceByName',
+        secretsBusName,
+        '0',
+      ], timeout: activationTimeout);
       return r.exitCode == 0;
     } on ProcessException {
       // gdbus was missing above too, so we got here via dbus-send.
@@ -138,14 +147,15 @@ class LinuxSecretServiceProbe {
     }
 
     try {
-      final r = await _run(
-        'dbus-send',
-        [
-          '--session', '--print-reply', '--dest=$_busDest', _busPath,
-          '$_busDest.StartServiceByName', 'string:$secretsBusName', 'uint32:0',
-        ],
-        timeout: activationTimeout,
-      );
+      final r = await _run('dbus-send', [
+        '--session',
+        '--print-reply',
+        '--dest=$_busDest',
+        _busPath,
+        '$_busDest.StartServiceByName',
+        'string:$secretsBusName',
+        'uint32:0',
+      ], timeout: activationTimeout);
       return r.exitCode == 0;
     } on ProcessException {
       return false;
@@ -164,15 +174,17 @@ class LinuxSecretServiceProbe {
   Future<bool> _defaultCollectionUnlocked() async {
     final String? path;
     try {
-      final r = await _run(
-        'gdbus',
-        [
-          'call', '--session',
-          '--dest', secretsBusName, '--object-path', _secretsPath,
-          '--method', '$_serviceIface.ReadAlias', 'default',
-        ],
-        timeout: queryTimeout,
-      );
+      final r = await _run('gdbus', [
+        'call',
+        '--session',
+        '--dest',
+        secretsBusName,
+        '--object-path',
+        _secretsPath,
+        '--method',
+        '$_serviceIface.ReadAlias',
+        'default',
+      ], timeout: queryTimeout);
       path = r.exitCode == 0 ? _objectPath(r.stdout) : null;
     } on ProcessException {
       return _defaultCollectionUnlockedViaDbusSend();
@@ -182,16 +194,18 @@ class LinuxSecretServiceProbe {
     if (path == null || path == '/') return false;
 
     try {
-      final r = await _run(
-        'gdbus',
-        [
-          'call', '--session',
-          '--dest', secretsBusName, '--object-path', path,
-          '--method', 'org.freedesktop.DBus.Properties.Get',
-          _collectionIface, 'Locked',
-        ],
-        timeout: queryTimeout,
-      );
+      final r = await _run('gdbus', [
+        'call',
+        '--session',
+        '--dest',
+        secretsBusName,
+        '--object-path',
+        path,
+        '--method',
+        'org.freedesktop.DBus.Properties.Get',
+        _collectionIface,
+        'Locked',
+      ], timeout: queryTimeout);
       return r.exitCode == 0 && r.stdout.contains('false');
     } on ProcessException {
       return false;
@@ -203,14 +217,14 @@ class LinuxSecretServiceProbe {
   Future<bool> _defaultCollectionUnlockedViaDbusSend() async {
     final String? path;
     try {
-      final r = await _run(
-        'dbus-send',
-        [
-          '--session', '--print-reply', '--dest=$secretsBusName', _secretsPath,
-          '$_serviceIface.ReadAlias', 'string:default',
-        ],
-        timeout: queryTimeout,
-      );
+      final r = await _run('dbus-send', [
+        '--session',
+        '--print-reply',
+        '--dest=$secretsBusName',
+        _secretsPath,
+        '$_serviceIface.ReadAlias',
+        'string:default',
+      ], timeout: queryTimeout);
       path = r.exitCode == 0 ? _objectPath(r.stdout) : null;
     } on ProcessException {
       return false;
@@ -220,15 +234,15 @@ class LinuxSecretServiceProbe {
     if (path == null || path == '/') return false;
 
     try {
-      final r = await _run(
-        'dbus-send',
-        [
-          '--session', '--print-reply', '--dest=$secretsBusName', path,
-          'org.freedesktop.DBus.Properties.Get',
-          'string:$_collectionIface', 'string:Locked',
-        ],
-        timeout: queryTimeout,
-      );
+      final r = await _run('dbus-send', [
+        '--session',
+        '--print-reply',
+        '--dest=$secretsBusName',
+        path,
+        'org.freedesktop.DBus.Properties.Get',
+        'string:$_collectionIface',
+        'string:Locked',
+      ], timeout: queryTimeout);
       return r.exitCode == 0 && r.stdout.contains('boolean false');
     } on ProcessException {
       return false;
@@ -269,7 +283,9 @@ class LinuxSecretServiceProbe {
     } on TimeoutException {
       process.kill(ProcessSignal.sigkill);
       if (kDebugMode) {
-        debugPrint('LinuxSecretServiceProbe: $executable ${args.last} timed out');
+        debugPrint(
+          'LinuxSecretServiceProbe: $executable ${args.last} timed out',
+        );
       }
       rethrow;
     }

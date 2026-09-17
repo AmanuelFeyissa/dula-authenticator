@@ -54,13 +54,13 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       _update(state.copyWith(credentialRotationEnabled: enabled));
 
   Future<void> setCredentialRotationDays(int days) => _update(
-        state.copyWith(
-          credentialRotationDays: days.clamp(
-            AppSettings.minRotationDays,
-            AppSettings.maxRotationDays,
-          ),
-        ),
-      );
+    state.copyWith(
+      credentialRotationDays: days.clamp(
+        AppSettings.minRotationDays,
+        AppSettings.maxRotationDays,
+      ),
+    ),
+  );
 
   /// Returns every setting to its default. Used by the reset-app flow.
   Future<void> reset() async {
@@ -69,7 +69,8 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   }
 }
 
-final settingsProvider =
-    StateNotifierProvider<SettingsNotifier, AppSettings>((ref) {
+final settingsProvider = StateNotifierProvider<SettingsNotifier, AppSettings>((
+  ref,
+) {
   return SettingsNotifier(ref.read(settingsRepositoryProvider));
 });

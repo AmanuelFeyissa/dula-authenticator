@@ -64,8 +64,8 @@ class ImportMerge {
   }
 
   static String _key(OtpAccount account) => [
-        account.issuer.trim().toLowerCase(),
-        account.accountName.trim().toLowerCase(),
-        account.secret.trim().toUpperCase(),
-      ].join(' ');
+    account.issuer.trim().toLowerCase(),
+    account.accountName.trim().toLowerCase(),
+    account.secret.trim().toUpperCase(),
+  ].join(' ');
 }

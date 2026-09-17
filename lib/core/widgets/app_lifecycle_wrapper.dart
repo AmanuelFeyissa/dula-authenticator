@@ -21,19 +21,22 @@ import 'package:dula_auth/features/settings/providers/settings_provider.dart';
 /// of freezing the platform thread. Overridden in tests with an in-process
 /// check against a fake store.
 final secureStorageProbeProvider = Provider<Future<bool> Function()>(
-  (ref) => () => SecureStorageCanary.check(ref.read(secretStoreProvider)),
+  (ref) =>
+      () => SecureStorageCanary.check(ref.read(secretStoreProvider)),
 );
 
 class AppLifecycleWrapper extends ConsumerStatefulWidget {
   final Widget child;
-  
+
   const AppLifecycleWrapper({super.key, required this.child});
 
   @override
-  ConsumerState<AppLifecycleWrapper> createState() => _AppLifecycleWrapperState();
+  ConsumerState<AppLifecycleWrapper> createState() =>
+      _AppLifecycleWrapperState();
 }
 
-class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with WidgetsBindingObserver {
+class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper>
+    with WidgetsBindingObserver {
   Timer? _lockTimer;
   bool _isDeviceCompromised = false;
   bool _isInactive = false;
@@ -57,7 +60,7 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
       setState(() => _secureStorageUnavailable = true);
     }
   }
-  
+
   Future<void> _checkDeviceIntegrity() async {
     if (kIsWeb) return;
     try {
@@ -69,7 +72,7 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
       } else if (defaultTargetPlatform == TargetPlatform.iOS) {
         isCompromised = await RootCheckerPlus.isJailbreak() ?? false;
       }
-      
+
       if (mounted && isCompromised) {
         setState(() {
           _isDeviceCompromised = true;
@@ -79,7 +82,7 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
       // If the security check fails, we conservatively continue but might log it
     }
   }
-  
+
   Future<void> _protectScreen() async {
     try {
       await ScreenProtector.preventScreenshotOn();
@@ -146,7 +149,8 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
     // Three gates, in order of precedence: create a credential, replace an
     // expired one, or unlock. Rotation only reaches the setup screen once the
     // current credential has been verified on the lock screen.
-    final needsSetup = authState.isSetupRequired ||
+    final needsSetup =
+        authState.isSetupRequired ||
         (authState.isCredentialExpired && authState.isVerifiedForRotation);
 
     Widget content = AnimatedSwitcher(
@@ -168,11 +172,19 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.shield_outlined, color: Colors.white70, size: 64),
+                  const Icon(
+                    Icons.shield_outlined,
+                    color: Colors.white70,
+                    size: 64,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     '${branding.appName} - Secure Mode',
-                    style: const TextStyle(color: Colors.white70, decoration: TextDecoration.none, fontSize: 18),
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      decoration: TextDecoration.none,
+                      fontSize: 18,
+                    ),
                   ),
                 ],
               ),
@@ -193,8 +205,11 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.no_encryption_gmailerrorred,
-                  color: Colors.redAccent, size: 80),
+              const Icon(
+                Icons.no_encryption_gmailerrorred,
+                color: Colors.redAccent,
+                size: 80,
+              ),
               const SizedBox(height: 24),
               const Text(
                 'No secure credential store available',
@@ -247,11 +262,19 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 80),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.white,
+                size: 80,
+              ),
               const SizedBox(height: 24),
               const Text(
                 'SECURITY ALERT',
-                style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 16),
               const Text(
@@ -262,7 +285,10 @@ class _AppLifecycleWrapperState extends ConsumerState<AppLifecycleWrapper> with 
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: () => exit(0),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.red[900]),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.red[900],
+                ),
                 child: const Text('CLOSE APPLICATION'),
               ),
             ],

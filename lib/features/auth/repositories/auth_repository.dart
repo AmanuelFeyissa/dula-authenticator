@@ -48,9 +48,9 @@ class AuthRepository {
     required SecretStore store,
     VaultService? vault,
     BiometricAuthenticator? biometrics,
-  })  : _store = store,
-        _vault = vault ?? VaultService(store),
-        _biometrics = biometrics ?? LocalAuthBiometrics();
+  }) : _store = store,
+       _vault = vault ?? VaultService(store),
+       _biometrics = biometrics ?? LocalAuthBiometrics();
 
   VaultService get vault => _vault;
 

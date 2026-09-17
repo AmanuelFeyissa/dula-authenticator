@@ -4,29 +4,32 @@ import 'package:dula_auth/core/settings/app_settings.dart';
 
 void main() {
   group('DeploymentConfig.fallback', () {
-    test('matches the values that were hardcoded before this config existed', () {
-      const fallback = DeploymentConfig.fallback;
-      expect(fallback.pinLength, 6);
-      expect(fallback.passphraseMinLength, 12);
-      expect(fallback.passphraseRecommendedLength, 15);
-      expect(fallback.passphraseMaxLength, 256);
-      expect(fallback.argon2MemoryKiB, 19456);
-      expect(fallback.argon2Iterations, 2);
-      expect(fallback.argon2Parallelism, 1);
-      expect(fallback.lockoutSteps.map((s) => s.attempts), [3, 5, 10]);
-      expect(fallback.lockoutSteps.map((s) => s.lockoutDuration), [
-        const Duration(seconds: 30),
-        const Duration(minutes: 5),
-        const Duration(hours: 1),
-      ]);
-      expect(fallback.defaultAutoLock, AutoLockDelay.thirtySeconds);
-      expect(fallback.credentialRotationDefaultDays, 90);
-      expect(fallback.credentialRotationMinDays, 1);
-      expect(fallback.credentialRotationMaxDays, 3650);
-      expect(fallback.credentialRotationOptionsDays, [30, 60, 90, 180, 365]);
-      expect(fallback.backupFileNamePrefix, isNull);
-      expect(fallback.copiedToClipboardSnackbarSeconds, 1);
-    });
+    test(
+      'matches the values that were hardcoded before this config existed',
+      () {
+        const fallback = DeploymentConfig.fallback;
+        expect(fallback.pinLength, 6);
+        expect(fallback.passphraseMinLength, 12);
+        expect(fallback.passphraseRecommendedLength, 15);
+        expect(fallback.passphraseMaxLength, 256);
+        expect(fallback.argon2MemoryKiB, 19456);
+        expect(fallback.argon2Iterations, 2);
+        expect(fallback.argon2Parallelism, 1);
+        expect(fallback.lockoutSteps.map((s) => s.attempts), [3, 5, 10]);
+        expect(fallback.lockoutSteps.map((s) => s.lockoutDuration), [
+          const Duration(seconds: 30),
+          const Duration(minutes: 5),
+          const Duration(hours: 1),
+        ]);
+        expect(fallback.defaultAutoLock, AutoLockDelay.thirtySeconds);
+        expect(fallback.credentialRotationDefaultDays, 90);
+        expect(fallback.credentialRotationMinDays, 1);
+        expect(fallback.credentialRotationMaxDays, 3650);
+        expect(fallback.credentialRotationOptionsDays, [30, 60, 90, 180, 365]);
+        expect(fallback.backupFileNamePrefix, isNull);
+        expect(fallback.copiedToClipboardSnackbarSeconds, 1);
+      },
+    );
   });
 
   group('DeploymentConfig.parse', () {
@@ -84,29 +87,43 @@ void main() {
     test('falls back field-by-field when sections are missing entirely', () {
       final config = DeploymentConfig.parse('{"security": {"pinLength": 4}}');
       expect(config.pinLength, 4);
-      expect(config.passphraseMinLength, DeploymentConfig.fallback.passphraseMinLength);
+      expect(
+        config.passphraseMinLength,
+        DeploymentConfig.fallback.passphraseMinLength,
+      );
       expect(config.backupFileNamePrefix, isNull);
-      expect(config.copiedToClipboardSnackbarSeconds,
-          DeploymentConfig.fallback.copiedToClipboardSnackbarSeconds);
+      expect(
+        config.copiedToClipboardSnackbarSeconds,
+        DeploymentConfig.fallback.copiedToClipboardSnackbarSeconds,
+      );
     });
 
     test('falls back to defaults for an unrecognized defaultAutoLock name', () {
       final config = DeploymentConfig.parse(
-          '{"security": {"defaultAutoLock": "not-a-real-option"}}');
+        '{"security": {"defaultAutoLock": "not-a-real-option"}}',
+      );
       expect(config.defaultAutoLock, DeploymentConfig.fallback.defaultAutoLock);
     });
 
-    test('ignores a malformed lockoutSteps entry and falls back to defaults', () {
-      final config = DeploymentConfig.parse('''
+    test(
+      'ignores a malformed lockoutSteps entry and falls back to defaults',
+      () {
+        final config = DeploymentConfig.parse('''
       {"security": {"lockoutSteps": [{"attempts": 2}]}}
       ''');
-      expect(config.lockoutSteps, DeploymentConfig.fallback.lockoutSteps);
-    });
+        expect(config.lockoutSteps, DeploymentConfig.fallback.lockoutSteps);
+      },
+    );
 
-    test('accepts an empty lockoutSteps as "lockout disabled", not malformed', () {
-      final config = DeploymentConfig.parse('{"security": {"lockoutSteps": []}}');
-      expect(config.lockoutSteps, isEmpty);
-    });
+    test(
+      'accepts an empty lockoutSteps as "lockout disabled", not malformed',
+      () {
+        final config = DeploymentConfig.parse(
+          '{"security": {"lockoutSteps": []}}',
+        );
+        expect(config.lockoutSteps, isEmpty);
+      },
+    );
 
     test('throws on invalid JSON so load() can catch it and use fallback', () {
       expect(() => DeploymentConfig.parse('not json'), throwsFormatException);
@@ -119,26 +136,46 @@ void main() {
       expect(config.pinLength, DeploymentConfig.fallback.pinLength);
     });
 
-    test('falls back to the default passphraseMinLength when below the NIST floor', () {
-      final config =
-          DeploymentConfig.parse('{"security": {"passphraseMinLength": 4}}');
-      expect(config.passphraseMinLength, DeploymentConfig.fallback.passphraseMinLength);
-    });
+    test(
+      'falls back to the default passphraseMinLength when below the NIST floor',
+      () {
+        final config = DeploymentConfig.parse(
+          '{"security": {"passphraseMinLength": 4}}',
+        );
+        expect(
+          config.passphraseMinLength,
+          DeploymentConfig.fallback.passphraseMinLength,
+        );
+      },
+    );
 
     test('accepts a passphraseMinLength raised above the default', () {
-      final config =
-          DeploymentConfig.parse('{"security": {"passphraseMinLength": 20}}');
+      final config = DeploymentConfig.parse(
+        '{"security": {"passphraseMinLength": 20}}',
+      );
       expect(config.passphraseMinLength, 20);
     });
 
-    test('falls back to the default Argon2id parameters when below the OWASP floor', () {
-      final config = DeploymentConfig.parse('''
+    test(
+      'falls back to the default Argon2id parameters when below the OWASP floor',
+      () {
+        final config = DeploymentConfig.parse('''
       {"security": {"argon2MemoryKiB": 100, "argon2Iterations": 1, "argon2Parallelism": 0}}
       ''');
-      expect(config.argon2MemoryKiB, DeploymentConfig.fallback.argon2MemoryKiB);
-      expect(config.argon2Iterations, DeploymentConfig.fallback.argon2Iterations);
-      expect(config.argon2Parallelism, DeploymentConfig.fallback.argon2Parallelism);
-    });
+        expect(
+          config.argon2MemoryKiB,
+          DeploymentConfig.fallback.argon2MemoryKiB,
+        );
+        expect(
+          config.argon2Iterations,
+          DeploymentConfig.fallback.argon2Iterations,
+        );
+        expect(
+          config.argon2Parallelism,
+          DeploymentConfig.fallback.argon2Parallelism,
+        );
+      },
+    );
 
     test('accepts Argon2id parameters raised above the OWASP floor', () {
       final config = DeploymentConfig.parse('''

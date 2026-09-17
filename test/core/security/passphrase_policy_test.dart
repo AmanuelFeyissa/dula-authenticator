@@ -22,7 +22,9 @@ void main() {
     test('accepts a long passphrase', () {
       // NIST SP 800-63B: verifiers must accept at least 64 characters.
       expect(
-        PassphrasePolicy.validate('rope anchor lantern harbour ${'cinder ' * 9}'),
+        PassphrasePolicy.validate(
+          'rope anchor lantern harbour ${'cinder ' * 9}',
+        ),
         isNull,
       );
     });
@@ -134,10 +136,7 @@ void main() {
     test('does not let sheer length disguise a two-character alternation', () {
       // 20 characters, but only two of them. Length alone would call this
       // fair; an attacker searching a 2-symbol alphabet would not.
-      expect(
-        PassphrasePolicy.strengthOf('ab' * 10),
-        PassphraseStrength.weak,
-      );
+      expect(PassphrasePolicy.strengthOf('ab' * 10), PassphraseStrength.weak);
     });
 
     test('caps a long but narrow passphrase at fair', () {
@@ -153,10 +152,14 @@ void main() {
 
     test('changes the enforced minimum length', () {
       PassphrasePolicy.configure(minLength: 20);
-      expect(PassphrasePolicy.validate('rope anchor lantern'.padRight(19, 'x')),
-          contains('20'));
-      expect(PassphrasePolicy.validate('rope anchor lantern'.padRight(20, 'x')),
-          isNull);
+      expect(
+        PassphrasePolicy.validate('rope anchor lantern'.padRight(19, 'x')),
+        contains('20'),
+      );
+      expect(
+        PassphrasePolicy.validate('rope anchor lantern'.padRight(20, 'x')),
+        isNull,
+      );
     });
 
     test('changes the enforced maximum length', () {
@@ -166,12 +169,18 @@ void main() {
 
     test('changes the recommended length used for strength guidance', () {
       PassphrasePolicy.configure(recommendedLength: 5);
-      expect(PassphrasePolicy.strengthOf('rope-anchor-9').index,
-          greaterThanOrEqualTo(PassphraseStrength.fair.index));
+      expect(
+        PassphrasePolicy.strengthOf('rope-anchor-9').index,
+        greaterThanOrEqualTo(PassphraseStrength.fair.index),
+      );
     });
 
     test('resetForTesting restores the default thresholds', () {
-      PassphrasePolicy.configure(minLength: 20, recommendedLength: 25, maxLength: 30);
+      PassphrasePolicy.configure(
+        minLength: 20,
+        recommendedLength: 25,
+        maxLength: 30,
+      );
       PassphrasePolicy.resetForTesting();
       expect(PassphrasePolicy.minLength, 12);
       expect(PassphrasePolicy.recommendedLength, 15);

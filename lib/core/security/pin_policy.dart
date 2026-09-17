@@ -169,7 +169,11 @@ class PinPolicy {
   /// Detects patterns like 112233 / 554433: three repeated-digit pairs whose
   /// values run in sequence.
   static bool _hasMixedSequentialRepeating(String pin) {
-    final pairs = [pin.substring(0, 2), pin.substring(2, 4), pin.substring(4, 6)];
+    final pairs = [
+      pin.substring(0, 2),
+      pin.substring(2, 4),
+      pin.substring(4, 6),
+    ];
     if (!pairs.every((p) => p[0] == p[1])) return false;
 
     final values = pairs.map((p) => int.parse(p[0])).toList();

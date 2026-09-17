@@ -35,7 +35,7 @@ class VaultService {
   final KdfParams _params;
 
   VaultService(this._store, {KdfParams? params})
-      : _params = params ?? KdfParams.deploymentDefault;
+    : _params = params ?? KdfParams.deploymentDefault;
 
   /// Whether a credential has been set up.
   Future<bool> isInitialized() async {
@@ -127,8 +127,7 @@ class VaultService {
           final account = Map<String, dynamic>.from(entry as Map);
           final sealed = account['secret'] as String? ?? '';
           if (sealed.isNotEmpty) {
-            final plaintext =
-                await VaultCrypto.decrypt(sealed, current.key!);
+            final plaintext = await VaultCrypto.decrypt(sealed, current.key!);
             if (plaintext == null) return false;
             account['secret'] = await VaultCrypto.encrypt(plaintext, newKey);
           }

@@ -35,7 +35,7 @@ class LocalAuthBiometrics implements BiometricAuthenticator {
   final LocalAuthentication _localAuth;
 
   LocalAuthBiometrics({LocalAuthentication? localAuth})
-      : _localAuth = localAuth ?? LocalAuthentication();
+    : _localAuth = localAuth ?? LocalAuthentication();
 
   /// Platforms with a real `local_auth` implementation.
   static bool get isPlatformSupported {

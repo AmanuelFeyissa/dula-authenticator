@@ -22,13 +22,21 @@ void main() {
 
     test('rejects ascending sequences', () {
       for (final pin in ['123456', '012345', '456789', '234567']) {
-        expect(PinPolicy.validate(pin), isNotNull, reason: '$pin is sequential');
+        expect(
+          PinPolicy.validate(pin),
+          isNotNull,
+          reason: '$pin is sequential',
+        );
       }
     });
 
     test('rejects descending sequences', () {
       for (final pin in ['654321', '543210', '987654', '765432']) {
-        expect(PinPolicy.validate(pin), isNotNull, reason: '$pin is sequential');
+        expect(
+          PinPolicy.validate(pin),
+          isNotNull,
+          reason: '$pin is sequential',
+        );
       }
     });
 
@@ -89,14 +97,17 @@ void main() {
       expect(PinPolicy.validate('19283'), contains('exactly 4 digits'));
     });
 
-    test('skips the curated 6-digit blocklist and pattern checks at a non-default length', () {
-      PinPolicy.configure(pinLength: 4);
-      // '1234' would be an ascending sequence at length 6 semantics, and
-      // '1212' would previously have crashed the 6-digit-specific pattern
-      // helpers (which slice into fixed-size pairs) if they ran at length 4.
-      expect(PinPolicy.validate('1234'), isNull);
-      expect(PinPolicy.validate('1212'), isNull);
-    });
+    test(
+      'skips the curated 6-digit blocklist and pattern checks at a non-default length',
+      () {
+        PinPolicy.configure(pinLength: 4);
+        // '1234' would be an ascending sequence at length 6 semantics, and
+        // '1212' would previously have crashed the 6-digit-specific pattern
+        // helpers (which slice into fixed-size pairs) if they ran at length 4.
+        expect(PinPolicy.validate('1234'), isNull);
+        expect(PinPolicy.validate('1212'), isNull);
+      },
+    );
 
     test('resetForTesting restores the default length and blocklist', () {
       PinPolicy.configure(pinLength: 4);

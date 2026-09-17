@@ -69,11 +69,9 @@ class _ChangeCredentialScreenState
       _error = null;
     });
 
-    final failure = await ref.read(authStateProvider.notifier).changeCredential(
-          current: _current.text,
-          next: _next.text,
-          kind: kind,
-        );
+    final failure = await ref
+        .read(authStateProvider.notifier)
+        .changeCredential(current: _current.text, next: _next.text, kind: kind);
 
     if (!mounted) return;
 
@@ -215,8 +213,9 @@ class _ChangeCredentialScreenState
       enabled: !_busy,
       keyboardType: isPin ? TextInputType.number : TextInputType.text,
       maxLength: isPin ? PinPolicy.pinLength : PassphrasePolicy.maxLength,
-      inputFormatters:
-          isPin ? [FilteringTextInputFormatter.digitsOnly] : const [],
+      inputFormatters: isPin
+          ? [FilteringTextInputFormatter.digitsOnly]
+          : const [],
       onChanged: (_) => onChanged?.call(),
       decoration: InputDecoration(
         labelText: label,

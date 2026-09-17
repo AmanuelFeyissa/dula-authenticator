@@ -67,11 +67,13 @@ class BrandingConfig {
       return BrandingConfig(
         appName: json['appName'] as String? ?? fallback.appName,
         logoAssetPath: json['logoAssetPath'] as String?,
-        primarySeedColor: _parseColor(json['primarySeedColorHex'] as String?) ??
+        primarySeedColor:
+            _parseColor(json['primarySeedColorHex'] as String?) ??
             fallback.primarySeedColor,
         organizationName:
             json['organizationName'] as String? ?? fallback.organizationName,
-        organizationDepartment: json['organizationDepartment'] as String? ??
+        organizationDepartment:
+            json['organizationDepartment'] as String? ??
             fallback.organizationDepartment,
         developerName:
             json['developerName'] as String? ?? fallback.developerName,

@@ -136,8 +136,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: filtered.isEmpty
                       ? _buildNoMatches()
                       : _filtering
-                          ? _buildStaticList(filtered)
-                          : _buildReorderableList(filtered),
+                      ? _buildStaticList(filtered)
+                      : _buildReorderableList(filtered),
                 ),
               ],
             );
@@ -147,14 +147,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, size: 80, color: Colors.white24),
+                const Icon(
+                  Icons.error_outline,
+                  size: 80,
+                  color: Colors.white24,
+                ),
                 const SizedBox(height: 24),
                 Text(
                   'Something went wrong',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text('$err', style: const TextStyle(color: Colors.white54)),
@@ -219,8 +223,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             FilterChip(
               label: Text(tag),
               selected: _activeTag == tag,
-              onSelected: (v) =>
-                  setState(() => _activeTag = v ? tag : null),
+              onSelected: (v) => setState(() => _activeTag = v ? tag : null),
             ),
           ],
         ],
@@ -276,9 +279,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _navigateToAddAccount(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (c) => const AddAccountScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (c) => const AddAccountScreen()));
   }
 
   void _showAboutDialog(BuildContext context, BrandingConfig branding) {
@@ -294,7 +297,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SizedBox(height: 20),
             Text(
               branding.appName,
-              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             Text(
               'Version $version',
@@ -309,7 +316,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white10,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
               ),
               child: const Text('CLOSE'),
             ),
@@ -326,7 +335,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         children: [
           Text(
             label,
-            style: const TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: Colors.white54,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           Text(
             value,
@@ -343,14 +356,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.account_balance_wallet_outlined, size: 80, color: Colors.white24),
+          const Icon(
+            Icons.account_balance_wallet_outlined,
+            size: 80,
+            color: Colors.white24,
+          ),
           const SizedBox(height: 24),
           Text(
             'No Accounts Yet',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 12),
           // Only suggest scanning where a scanner exists (ADR-0006); on
@@ -396,7 +413,10 @@ class _CorruptedAccountCard extends ConsumerWidget {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('DELETE', style: TextStyle(color: Colors.redAccent)),
+              child: const Text(
+                'DELETE',
+                style: TextStyle(color: Colors.redAccent),
+              ),
             ),
           ],
         ),
@@ -436,8 +456,13 @@ class _CorruptedAccountCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    account.issuer.isNotEmpty ? account.issuer : 'Authenticator',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    account.issuer.isNotEmpty
+                        ? account.issuer
+                        : 'Authenticator',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   Text(
                     account.accountName,
@@ -481,8 +506,9 @@ class _AccountCard extends ConsumerWidget {
 
     final isCounterBased = account.type == OtpType.hotp;
     final int remainingSeconds = account.secondsRemaining(time: now);
-    final double progress =
-        isCounterBased ? 0 : remainingSeconds / account.period;
+    final double progress = isCounterBased
+        ? 0
+        : remainingSeconds / account.period;
 
     final formattedCode = _formatCode(code);
 
@@ -494,12 +520,20 @@ class _AccountCard extends ConsumerWidget {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Delete Account'),
-            content: Text('Are you sure you want to remove ${account.accountName}?'),
+            content: Text(
+              'Are you sure you want to remove ${account.accountName}?',
+            ),
             actions: [
-              TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('CANCEL')),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('CANCEL'),
+              ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('DELETE', style: TextStyle(color: Colors.redAccent)),
+                child: const Text(
+                  'DELETE',
+                  style: TextStyle(color: Colors.redAccent),
+                ),
               ),
             ],
           ),
@@ -511,14 +545,18 @@ class _AccountCard extends ConsumerWidget {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        decoration: BoxDecoration(color: Colors.redAccent, borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(
+          color: Colors.redAccent,
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       child: GestureDetector(
         onTap: () {
           Clipboard.setData(ClipboardData(text: code));
-          final snackbarSeconds =
-              ref.read(deploymentConfigProvider).copiedToClipboardSnackbarSeconds;
+          final snackbarSeconds = ref
+              .read(deploymentConfigProvider)
+              .copiedToClipboardSnackbarSeconds;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text(
@@ -533,7 +571,9 @@ class _AccountCard extends ConsumerWidget {
           margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.white10),
             boxShadow: [
@@ -558,22 +598,36 @@ class _AccountCard extends ConsumerWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                account.issuer.isNotEmpty ? account.issuer : 'Authenticator',
-                                style: const TextStyle(fontSize: 14, color: Colors.white54, fontWeight: FontWeight.w600),
+                                account.issuer.isNotEmpty
+                                    ? account.issuer
+                                    : 'Authenticator',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white54,
+                                  fontWeight: FontWeight.w600,
+                                ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             if (account.isFavorite)
                               const Padding(
                                 padding: EdgeInsets.only(left: 4),
-                                child: Icon(Icons.star, size: 14, color: Colors.amberAccent),
+                                child: Icon(
+                                  Icons.star,
+                                  size: 14,
+                                  color: Colors.amberAccent,
+                                ),
                               ),
                           ],
                         ),
                         const SizedBox(height: 4),
                         Text(
                           account.accountName,
-                          style: const TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.w500),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -635,7 +689,11 @@ class _AccountCard extends ConsumerWidget {
                       ),
                     ),
                   PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert, color: Colors.white38, size: 20),
+                    icon: const Icon(
+                      Icons.more_vert,
+                      color: Colors.white38,
+                      size: 20,
+                    ),
                     onSelected: (value) => _handleMenu(context, ref, value),
                     itemBuilder: (context) => [
                       PopupMenuItem(
@@ -643,13 +701,17 @@ class _AccountCard extends ConsumerWidget {
                         child: Row(
                           children: [
                             Icon(
-                              account.isFavorite ? Icons.star : Icons.star_border,
+                              account.isFavorite
+                                  ? Icons.star
+                                  : Icons.star_border,
                               size: 18,
                             ),
                             const SizedBox(width: 12),
-                            Text(account.isFavorite
-                                ? 'Remove from favorites'
-                                : 'Add to favorites'),
+                            Text(
+                              account.isFavorite
+                                  ? 'Remove from favorites'
+                                  : 'Add to favorites',
+                            ),
                           ],
                         ),
                       ),
@@ -711,7 +773,9 @@ class _AccountCard extends ConsumerWidget {
         _showTagEditor(context, ref);
       case 'edit':
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => AddAccountScreen(existing: account)),
+          MaterialPageRoute(
+            builder: (_) => AddAccountScreen(existing: account),
+          ),
         );
     }
   }

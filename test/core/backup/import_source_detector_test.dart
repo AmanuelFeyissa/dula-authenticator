@@ -36,17 +36,23 @@ void main() {
   });
 
   test('reports unrecognized JSON that matches no known shape', () {
-    expect(ImportSourceDetector.detect(jsonEncode({'hello': 'world'})),
-        BackupSourceKind.unrecognized);
+    expect(
+      ImportSourceDetector.detect(jsonEncode({'hello': 'world'})),
+      BackupSourceKind.unrecognized,
+    );
   });
 
   test('reports unrecognized for input that is not JSON', () {
-    expect(ImportSourceDetector.detect('not json'),
-        BackupSourceKind.unrecognized);
+    expect(
+      ImportSourceDetector.detect('not json'),
+      BackupSourceKind.unrecognized,
+    );
   });
 
   test('reports unrecognized for JSON that is not an object', () {
-    expect(ImportSourceDetector.detect(jsonEncode([1, 2, 3])),
-        BackupSourceKind.unrecognized);
+    expect(
+      ImportSourceDetector.detect(jsonEncode([1, 2, 3])),
+      BackupSourceKind.unrecognized,
+    );
   });
 }

@@ -49,11 +49,15 @@ void main() {
       }
 
       expect(target, findsOneWidget);
-      expect(find.text('How would you like to unlock?'), findsNothing,
-          reason: 'an unreachable store must not look like first run');
+      expect(
+        find.text('How would you like to unlock?'),
+        findsNothing,
+        reason: 'an unreachable store must not look like first run',
+      );
     },
-    skip: !(_expectNoKeyring &&
-        !kIsWeb &&
-        defaultTargetPlatform == TargetPlatform.linux),
+    skip:
+        !(_expectNoKeyring &&
+            !kIsWeb &&
+            defaultTargetPlatform == TargetPlatform.linux),
   );
 }

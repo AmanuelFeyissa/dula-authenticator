@@ -158,6 +158,8 @@ class BackupService {
 
   static Uint8List _randomSalt() {
     final random = Random.secure();
-    return Uint8List.fromList(List<int>.generate(32, (_) => random.nextInt(256)));
+    return Uint8List.fromList(
+      List<int>.generate(32, (_) => random.nextInt(256)),
+    );
   }
 }

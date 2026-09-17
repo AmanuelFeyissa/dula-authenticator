@@ -72,9 +72,7 @@ class _PassphraseFieldState extends State<PassphraseField> {
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Colors.tealAccent),
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             suffixIcon: IconButton(
               tooltip: _revealed ? 'Hide passphrase' : 'Show passphrase',
               icon: Icon(

@@ -30,11 +30,16 @@ List<int> _varint(int value) {
 List<int> _tag(int fieldNumber, int wireType) =>
     _varint((fieldNumber << 3) | wireType);
 
-List<int> _lengthDelimited(int fieldNumber, List<int> data) =>
-    [..._tag(fieldNumber, 2), ..._varint(data.length), ...data];
+List<int> _lengthDelimited(int fieldNumber, List<int> data) => [
+  ..._tag(fieldNumber, 2),
+  ..._varint(data.length),
+  ...data,
+];
 
-List<int> _varintField(int fieldNumber, int value) =>
-    [..._tag(fieldNumber, 0), ..._varint(value)];
+List<int> _varintField(int fieldNumber, int value) => [
+  ..._tag(fieldNumber, 0),
+  ..._varint(value),
+];
 
 List<int> _otpParameters({
   required List<int> secret,
@@ -89,8 +94,10 @@ void main() {
 
     test('rejects a migration URI with no data parameter', () {
       expect(
-        GoogleAuthenticatorMigration.parse('otpauth-migration://offline',
-            newId: nextId),
+        GoogleAuthenticatorMigration.parse(
+          'otpauth-migration://offline',
+          newId: nextId,
+        ),
         isNull,
       );
     });
@@ -109,8 +116,10 @@ void main() {
       // Zero entries is a valid (if useless) payload — distinct from a
       // payload that could not be parsed at all.
       expect(
-        GoogleAuthenticatorMigration.parse(_migrationUri(_payload([])),
-            newId: nextId),
+        GoogleAuthenticatorMigration.parse(
+          _migrationUri(_payload([])),
+          newId: nextId,
+        ),
         isEmpty,
       );
     });
@@ -118,9 +127,11 @@ void main() {
 
   group('single entry', () {
     test('decodes secret, name, and issuer', () {
-      final uri = _migrationUri(_payload([
-        _otpParameters(secret: secretBytes, name: 'alice', issuer: 'GitHub'),
-      ]));
+      final uri = _migrationUri(
+        _payload([
+          _otpParameters(secret: secretBytes, name: 'alice', issuer: 'GitHub'),
+        ]),
+      );
 
       final accounts = GoogleAuthenticatorMigration.parse(uri, newId: nextId)!;
 
@@ -132,78 +143,106 @@ void main() {
     });
 
     test('defaults to SHA-1, 6 digits, TOTP when fields are absent', () {
-      final uri = _migrationUri(_payload([
-        _otpParameters(secret: secretBytes, name: 'alice', issuer: 'GitHub'),
-      ]));
+      final uri = _migrationUri(
+        _payload([
+          _otpParameters(secret: secretBytes, name: 'alice', issuer: 'GitHub'),
+        ]),
+      );
 
-      final account = GoogleAuthenticatorMigration.parse(uri, newId: nextId)!.single;
+      final account = GoogleAuthenticatorMigration.parse(
+        uri,
+        newId: nextId,
+      )!.single;
 
       expect(account.algorithm, OtpAlgorithm.sha1);
       expect(account.digits, 6);
       expect(account.type, OtpType.totp);
-      expect(account.period, 30,
-          reason: 'the migration payload carries no period; GA always uses 30s');
+      expect(
+        account.period,
+        30,
+        reason: 'the migration payload carries no period; GA always uses 30s',
+      );
     });
 
     test('maps each algorithm enum value', () {
-      final cases = {1: OtpAlgorithm.sha1, 2: OtpAlgorithm.sha256, 3: OtpAlgorithm.sha512};
+      final cases = {
+        1: OtpAlgorithm.sha1,
+        2: OtpAlgorithm.sha256,
+        3: OtpAlgorithm.sha512,
+      };
       for (final entry in cases.entries) {
-        final uri = _migrationUri(_payload([
-          _otpParameters(secret: secretBytes, algorithm: entry.key),
-        ]));
-        final account =
-            GoogleAuthenticatorMigration.parse(uri, newId: nextId)!.single;
-        expect(account.algorithm, entry.value, reason: 'algorithm=${entry.key}');
+        final uri = _migrationUri(
+          _payload([_otpParameters(secret: secretBytes, algorithm: entry.key)]),
+        );
+        final account = GoogleAuthenticatorMigration.parse(
+          uri,
+          newId: nextId,
+        )!.single;
+        expect(
+          account.algorithm,
+          entry.value,
+          reason: 'algorithm=${entry.key}',
+        );
       }
     });
 
     test('falls back to SHA-1 for the unsupported MD5 enum value', () {
       // MD5 (4) exists in the schema but this app has no MD5 generator; a
       // silently wrong algorithm is worse than a clearly-labelled fallback.
-      final uri = _migrationUri(_payload([
-        _otpParameters(secret: secretBytes, algorithm: 4),
-      ]));
-      final account =
-          GoogleAuthenticatorMigration.parse(uri, newId: nextId)!.single;
+      final uri = _migrationUri(
+        _payload([_otpParameters(secret: secretBytes, algorithm: 4)]),
+      );
+      final account = GoogleAuthenticatorMigration.parse(
+        uri,
+        newId: nextId,
+      )!.single;
       expect(account.algorithm, OtpAlgorithm.sha1);
     });
 
     test('maps the eight-digit enum value', () {
-      final uri = _migrationUri(_payload([
-        _otpParameters(secret: secretBytes, digits: 2),
-      ]));
-      final account =
-          GoogleAuthenticatorMigration.parse(uri, newId: nextId)!.single;
+      final uri = _migrationUri(
+        _payload([_otpParameters(secret: secretBytes, digits: 2)]),
+      );
+      final account = GoogleAuthenticatorMigration.parse(
+        uri,
+        newId: nextId,
+      )!.single;
       expect(account.digits, 8);
     });
 
     test('maps HOTP and carries the counter', () {
-      final uri = _migrationUri(_payload([
-        _otpParameters(secret: secretBytes, type: 1, counter: 42),
-      ]));
-      final account =
-          GoogleAuthenticatorMigration.parse(uri, newId: nextId)!.single;
+      final uri = _migrationUri(
+        _payload([_otpParameters(secret: secretBytes, type: 1, counter: 42)]),
+      );
+      final account = GoogleAuthenticatorMigration.parse(
+        uri,
+        newId: nextId,
+      )!.single;
       expect(account.type, OtpType.hotp);
       expect(account.counter, 42);
     });
 
     test('maps TOTP explicitly', () {
-      final uri = _migrationUri(_payload([
-        _otpParameters(secret: secretBytes, type: 2),
-      ]));
-      final account =
-          GoogleAuthenticatorMigration.parse(uri, newId: nextId)!.single;
+      final uri = _migrationUri(
+        _payload([_otpParameters(secret: secretBytes, type: 2)]),
+      );
+      final account = GoogleAuthenticatorMigration.parse(
+        uri,
+        newId: nextId,
+      )!.single;
       expect(account.type, OtpType.totp);
     });
   });
 
   group('multiple entries', () {
     test('decodes every entry in a batch, in order', () {
-      final uri = _migrationUri(_payload([
-        _otpParameters(secret: secretBytes, name: 'a', issuer: 'One'),
-        _otpParameters(secret: secretBytes, name: 'b', issuer: 'Two'),
-        _otpParameters(secret: secretBytes, name: 'c', issuer: 'Three'),
-      ]));
+      final uri = _migrationUri(
+        _payload([
+          _otpParameters(secret: secretBytes, name: 'a', issuer: 'One'),
+          _otpParameters(secret: secretBytes, name: 'b', issuer: 'Two'),
+          _otpParameters(secret: secretBytes, name: 'c', issuer: 'Three'),
+        ]),
+      );
 
       final accounts = GoogleAuthenticatorMigration.parse(uri, newId: nextId)!;
 
@@ -212,10 +251,11 @@ void main() {
     });
 
     test('a batch header does not disturb entry parsing', () {
-      final uri = _migrationUri(_payload(
-        [_otpParameters(secret: secretBytes, issuer: 'Solo')],
-        version: 1,
-      ));
+      final uri = _migrationUri(
+        _payload([
+          _otpParameters(secret: secretBytes, issuer: 'Solo'),
+        ], version: 1),
+      );
 
       final accounts = GoogleAuthenticatorMigration.parse(uri, newId: nextId)!;
       expect(accounts, hasLength(1));
@@ -225,9 +265,9 @@ void main() {
 
   group('hostile input', () {
     test('rejects an entry with no secret', () {
-      final uri = _migrationUri(_payload([
-        _otpParameters(secret: [], issuer: 'Empty'),
-      ]));
+      final uri = _migrationUri(
+        _payload([_otpParameters(secret: [], issuer: 'Empty')]),
+      );
       // A credential with no secret can never produce a code; it must not
       // silently become an unusable account.
       expect(GoogleAuthenticatorMigration.parse(uri, newId: nextId), isNull);
@@ -240,8 +280,10 @@ void main() {
       final truncated = good.sublist(0, good.length - 3);
       final uri = _migrationUri(truncated);
 
-      expect(() => GoogleAuthenticatorMigration.parse(uri, newId: nextId),
-          returnsNormally);
+      expect(
+        () => GoogleAuthenticatorMigration.parse(uri, newId: nextId),
+        returnsNormally,
+      );
       expect(GoogleAuthenticatorMigration.parse(uri, newId: nextId), isNull);
     });
 
@@ -249,8 +291,10 @@ void main() {
       final malformed = [..._tag(1, 2), 0xFF];
       final uri = _migrationUri(malformed);
 
-      expect(() => GoogleAuthenticatorMigration.parse(uri, newId: nextId),
-          returnsNormally);
+      expect(
+        () => GoogleAuthenticatorMigration.parse(uri, newId: nextId),
+        returnsNormally,
+      );
       expect(GoogleAuthenticatorMigration.parse(uri, newId: nextId), isNull);
     });
 
@@ -268,9 +312,12 @@ void main() {
       expect(accounts.single.issuer, 'StillWorks');
     });
 
-    test('rejects raw bytes that are not a valid otpauth-migration payload', () {
-      final uri = _migrationUri(utf8.encode('this is not protobuf at all'));
-      expect(GoogleAuthenticatorMigration.parse(uri, newId: nextId), isNull);
-    });
+    test(
+      'rejects raw bytes that are not a valid otpauth-migration payload',
+      () {
+        final uri = _migrationUri(utf8.encode('this is not protobuf at all'));
+        expect(GoogleAuthenticatorMigration.parse(uri, newId: nextId), isNull);
+      },
+    );
   });
 }

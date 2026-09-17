@@ -48,7 +48,10 @@ import 'package:dula_auth/core/otp/otp_type.dart';
 class GoogleAuthenticatorMigration {
   /// Parses [raw] into accounts, or returns null if it is not a well-formed
   /// migration payload. [newId] supplies a fresh id per decoded account.
-  static List<OtpAccount>? parse(String raw, {required String Function() newId}) {
+  static List<OtpAccount>? parse(
+    String raw, {
+    required String Function() newId,
+  }) {
     final trimmed = raw.trim();
     if (trimmed.isEmpty) return null;
 
@@ -83,7 +86,10 @@ class GoogleAuthenticatorMigration {
         continue; // version/batch_size/batch_index/batch_id, or unknown.
       }
       final account = _parseOtpParameters(field.bytes!, newId());
-      if (account == null) return null; // Fail closed: one bad entry, no import.
+      // Fail closed: one bad entry, no import.
+      if (account == null) {
+        return null;
+      }
       accounts.add(account);
     }
     return accounts;

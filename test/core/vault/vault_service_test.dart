@@ -23,16 +23,18 @@ void main() {
       expect(await vault.isInitialized(), isFalse);
     });
 
-    test('initialize records the vault format and reports initialized',
-        () async {
-      await vault.initialize('correct horse battery');
+    test(
+      'initialize records the vault format and reports initialized',
+      () async {
+        await vault.initialize('correct horse battery');
 
-      expect(await vault.isInitialized(), isTrue);
-      expect(
-        VaultMeta.fromJson(await store.read(VaultService.metaKey)).version,
-        VaultMeta.currentVersion,
-      );
-    });
+        expect(await vault.isInitialized(), isTrue);
+        expect(
+          VaultMeta.fromJson(await store.read(VaultService.metaKey)).version,
+          VaultMeta.currentVersion,
+        );
+      },
+    );
 
     test('never stores the raw credential', () async {
       await vault.initialize('correct horse battery');
@@ -114,9 +116,13 @@ void main() {
       );
 
       expect(changed, isFalse);
-      expect(await vault.credentialKind(), CredentialKind.pin,
-          reason: 'a refused change must not leave the lock screen '
-              'presenting the wrong input');
+      expect(
+        await vault.credentialKind(),
+        CredentialKind.pin,
+        reason:
+            'a refused change must not leave the lock screen '
+            'presenting the wrong input',
+      );
     });
   });
 
@@ -153,8 +159,11 @@ void main() {
         '{"v":${VaultMeta.currentVersion + 1},"kdf":{"alg":"argon2id","m":256,"t":1,"p":1}}',
       );
 
-      expect((await vault.unlock('correct horse battery')).isUnlocked, isFalse,
-          reason: 'guessing at an unknown vault format risks data loss');
+      expect(
+        (await vault.unlock('correct horse battery')).isUnlocked,
+        isFalse,
+        reason: 'guessing at an unknown vault format risks data loss',
+      );
     });
   });
 
@@ -213,8 +222,11 @@ void main() {
       );
 
       expect(changed, isFalse);
-      expect((await vault.unlock('old passphrase')).isUnlocked, isTrue,
-          reason: 'the original credential must keep working');
+      expect(
+        (await vault.unlock('old passphrase')).isUnlocked,
+        isTrue,
+        reason: 'the original credential must keep working',
+      );
     });
   });
 

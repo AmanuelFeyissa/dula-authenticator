@@ -68,8 +68,9 @@ class _BackupImportReviewScreenState
 
     var added = 0;
     for (final account in toImport) {
-      final ok =
-          await ref.read(accountListProvider.notifier).addAccount(account);
+      final ok = await ref
+          .read(accountListProvider.notifier)
+          .addAccount(account);
       if (ok) added++;
     }
 
@@ -94,7 +95,9 @@ class _BackupImportReviewScreenState
         maxWidth: 700,
         padding: const EdgeInsets.all(16),
         child: totalIncoming == 0
-            ? const Center(child: Text('This source had no accounts to import.'))
+            ? const Center(
+                child: Text('This source had no accounts to import.'),
+              )
             : ListView(
                 children: [
                   Text(
@@ -133,12 +136,15 @@ class _BackupImportReviewScreenState
                     for (final duplicate in _plan.duplicates)
                       _AccountTile(
                         account: duplicate.incoming,
-                        selected:
-                            _selectedIncomingIds.contains(duplicate.incoming.id),
+                        selected: _selectedIncomingIds.contains(
+                          duplicate.incoming.id,
+                        ),
                         onChanged: (v) => setState(() {
                           v
                               ? _selectedIncomingIds.add(duplicate.incoming.id)
-                              : _selectedIncomingIds.remove(duplicate.incoming.id);
+                              : _selectedIncomingIds.remove(
+                                  duplicate.incoming.id,
+                                );
                         }),
                       ),
                   ],

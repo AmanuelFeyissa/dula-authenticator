@@ -35,9 +35,7 @@ class SettingsScreen extends ConsumerWidget {
     final branding = ref.watch(brandingConfigProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: ResponsiveLayout(
         maxWidth: 700,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
@@ -70,7 +68,9 @@ class SettingsScreen extends ConsumerWidget {
               ),
               trailing: DropdownButton<AutoLockDelay>(
                 value: settings.autoLock,
-                dropdownColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+                dropdownColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHigh,
                 underline: const SizedBox.shrink(),
                 onChanged: (value) {
                   if (value != null) {
@@ -79,10 +79,7 @@ class SettingsScreen extends ConsumerWidget {
                 },
                 items: [
                   for (final option in AutoLockDelay.values)
-                    DropdownMenuItem(
-                      value: option,
-                      child: Text(option.label),
-                    ),
+                    DropdownMenuItem(value: option, child: Text(option.label)),
                 ],
               ),
             ),
@@ -155,8 +152,10 @@ class SettingsScreen extends ConsumerWidget {
             const Divider(),
             const SectionHeader('Danger zone'),
             ListTile(
-              leading:
-                  const Icon(Icons.delete_forever, color: Colors.redAccent),
+              leading: const Icon(
+                Icons.delete_forever,
+                color: Colors.redAccent,
+              ),
               title: const Text(
                 'Erase everything',
                 style: TextStyle(color: Colors.redAccent),
@@ -222,8 +221,13 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Widget _rotationPeriodTile(
-      BuildContext context, WidgetRef ref, AppSettings settings) {
-    final options = ref.watch(deploymentConfigProvider).credentialRotationOptionsDays;
+    BuildContext context,
+    WidgetRef ref,
+    AppSettings settings,
+  ) {
+    final options = ref
+        .watch(deploymentConfigProvider)
+        .credentialRotationOptionsDays;
     return ListTile(
       leading: const SizedBox(width: 24),
       title: const Text('Change every'),
@@ -281,7 +285,6 @@ class SettingsScreen extends ConsumerWidget {
     if (context.mounted) Navigator.of(context).popUntil((r) => r.isFirst);
   }
 }
-
 
 /// A plain explanation under a setting, for the cases where the honest answer
 /// is longer than a subtitle.

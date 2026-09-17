@@ -41,10 +41,10 @@ class VaultMeta {
   bool get isSupported => version == currentVersion;
 
   String toJson() => jsonEncode({
-        'v': version,
-        'kdf': kdfParams.toMap(),
-        'cred': credentialKind.name,
-      });
+    'v': version,
+    'kdf': kdfParams.toMap(),
+    'cred': credentialKind.name,
+  });
 
   /// Parses a stored metadata record. Missing or unreadable metadata yields
   /// the current version with default parameters, which the verifier check

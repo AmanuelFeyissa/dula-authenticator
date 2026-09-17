@@ -42,11 +42,13 @@ void _applyDeploymentConfig(DeploymentConfig config) {
     recommendedLength: config.passphraseRecommendedLength,
     maxLength: config.passphraseMaxLength,
   );
-  KdfParams.configureDefault(KdfParams(
-    memoryKiB: config.argon2MemoryKiB,
-    iterations: config.argon2Iterations,
-    parallelism: config.argon2Parallelism,
-  ));
+  KdfParams.configureDefault(
+    KdfParams(
+      memoryKiB: config.argon2MemoryKiB,
+      iterations: config.argon2Iterations,
+      parallelism: config.argon2Parallelism,
+    ),
+  );
   LockoutPolicy.configure(config.lockoutSteps);
   AppSettings.configureDefaults(
     autoLock: config.defaultAutoLock,
@@ -68,9 +70,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(branding),
       // AppLifecycleWrapper manages the lock screen overlay
-      home: const AppLifecycleWrapper(
-        child: HomeScreen(),
-      ),
+      home: const AppLifecycleWrapper(child: HomeScreen()),
     );
   }
 }

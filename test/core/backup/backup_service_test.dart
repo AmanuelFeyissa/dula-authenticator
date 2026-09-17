@@ -38,18 +38,24 @@ void main() {
   ];
 
   group('export', () {
-    test('refuses a passphrase below policy rather than encrypting anyway',
-        () async {
-      final result =
-          await BackupService.export(accounts, 'short', params: testParams);
+    test(
+      'refuses a passphrase below policy rather than encrypting anyway',
+      () async {
+        final result = await BackupService.export(
+          accounts,
+          'short',
+          params: testParams,
+        );
 
-      expect(result, isA<BackupExportRejected>());
-      expect((result as BackupExportRejected).reason, isNotEmpty);
-    });
+        expect(result, isA<BackupExportRejected>());
+        expect((result as BackupExportRejected).reason, isNotEmpty);
+      },
+    );
 
     test('never writes a secret in the clear', () async {
-      final result = await BackupService.export(accounts, passphrase,
-          params: testParams) as BackupExportSuccess;
+      final result =
+          await BackupService.export(accounts, passphrase, params: testParams)
+              as BackupExportSuccess;
 
       expect(result.fileContent, isNot(contains('JBSWY3DPEHPK3PXP')));
       expect(result.fileContent, isNot(contains('KRSXG5CTMVRXEZLU')));
@@ -57,8 +63,9 @@ void main() {
     });
 
     test('produces a self-describing envelope', () async {
-      final result = await BackupService.export(accounts, passphrase,
-          params: testParams) as BackupExportSuccess;
+      final result =
+          await BackupService.export(accounts, passphrase, params: testParams)
+              as BackupExportSuccess;
 
       final envelope = jsonDecode(result.fileContent) as Map<String, dynamic>;
       expect(envelope['v'], BackupService.formatVersion);
@@ -71,11 +78,13 @@ void main() {
 
   group('import', () {
     test('round-trips every account field exactly', () async {
-      final exported = await BackupService.export(accounts, passphrase,
-          params: testParams) as BackupExportSuccess;
+      final exported =
+          await BackupService.export(accounts, passphrase, params: testParams)
+              as BackupExportSuccess;
 
-      final result = await BackupService.import(
-          exported.fileContent, passphrase) as BackupImportSuccess;
+      final result =
+          await BackupService.import(exported.fileContent, passphrase)
+              as BackupImportSuccess;
 
       expect(result.accounts, hasLength(3));
       expect(result.accounts[1].digits, 8);
@@ -83,30 +92,39 @@ void main() {
       expect(result.accounts[1].algorithm, OtpAlgorithm.sha256);
       expect(result.accounts[2].type, OtpType.hotp);
       expect(result.accounts[2].counter, 5);
-      expect(result.accounts.map((a) => a.secret),
-          containsAll(['JBSWY3DPEHPK3PXP', 'KRSXG5CTMVRXEZLU']));
+      expect(
+        result.accounts.map((a) => a.secret),
+        containsAll(['JBSWY3DPEHPK3PXP', 'KRSXG5CTMVRXEZLU']),
+      );
     });
 
     test('preserves the original account ids', () async {
-      final exported = await BackupService.export(accounts, passphrase,
-          params: testParams) as BackupExportSuccess;
+      final exported =
+          await BackupService.export(accounts, passphrase, params: testParams)
+              as BackupExportSuccess;
 
-      final result = await BackupService.import(
-          exported.fileContent, passphrase) as BackupImportSuccess;
+      final result =
+          await BackupService.import(exported.fileContent, passphrase)
+              as BackupImportSuccess;
 
       expect(result.accounts.map((a) => a.id), ['1', '2', '3']);
     });
 
-    test('reports the wrong passphrase distinctly from a corrupt file',
-        () async {
-      final exported = await BackupService.export(accounts, passphrase,
-          params: testParams) as BackupExportSuccess;
+    test(
+      'reports the wrong passphrase distinctly from a corrupt file',
+      () async {
+        final exported =
+            await BackupService.export(accounts, passphrase, params: testParams)
+                as BackupExportSuccess;
 
-      final result = await BackupService.import(
-          exported.fileContent, 'not the passphrase');
+        final result = await BackupService.import(
+          exported.fileContent,
+          'not the passphrase',
+        );
 
-      expect(result, isA<BackupImportWrongPassphrase>());
-    });
+        expect(result, isA<BackupImportWrongPassphrase>());
+      },
+    );
 
     test('rejects a file that is not JSON', () async {
       final result = await BackupService.import('not json at all', passphrase);
@@ -114,37 +132,45 @@ void main() {
     });
 
     test('rejects a file missing required envelope fields', () async {
-      final result =
-          await BackupService.import(jsonEncode({'v': 1}), passphrase);
+      final result = await BackupService.import(
+        jsonEncode({'v': 1}),
+        passphrase,
+      );
       expect(result, isA<BackupImportMalformed>());
     });
 
-    test('refuses a file from an unsupported future format version',
-        () async {
-      final exported = await BackupService.export(accounts, passphrase,
-          params: testParams) as BackupExportSuccess;
-      final envelope =
-          jsonDecode(exported.fileContent) as Map<String, dynamic>;
+    test('refuses a file from an unsupported future format version', () async {
+      final exported =
+          await BackupService.export(accounts, passphrase, params: testParams)
+              as BackupExportSuccess;
+      final envelope = jsonDecode(exported.fileContent) as Map<String, dynamic>;
       envelope['v'] = BackupService.formatVersion + 1;
 
-      final result =
-          await BackupService.import(jsonEncode(envelope), passphrase);
+      final result = await BackupService.import(
+        jsonEncode(envelope),
+        passphrase,
+      );
 
-      expect(result, isA<BackupImportMalformed>(),
-          reason: 'guessing at an unknown backup format risks data loss');
+      expect(
+        result,
+        isA<BackupImportMalformed>(),
+        reason: 'guessing at an unknown backup format risks data loss',
+      );
     });
 
     test('detects tampering with the encrypted payload', () async {
-      final exported = await BackupService.export(accounts, passphrase,
-          params: testParams) as BackupExportSuccess;
-      final envelope =
-          jsonDecode(exported.fileContent) as Map<String, dynamic>;
+      final exported =
+          await BackupService.export(accounts, passphrase, params: testParams)
+              as BackupExportSuccess;
+      final envelope = jsonDecode(exported.fileContent) as Map<String, dynamic>;
       final payload = base64.decode(envelope['payload'] as String);
       payload[payload.length ~/ 2] ^= 0x01;
       envelope['payload'] = base64.encode(payload);
 
-      final result =
-          await BackupService.import(jsonEncode(envelope), passphrase);
+      final result = await BackupService.import(
+        jsonEncode(envelope),
+        passphrase,
+      );
 
       // GCM authentication fails the same way a wrong passphrase would — both
       // mean "this key does not open this payload" — so it must not be
@@ -153,11 +179,13 @@ void main() {
     });
 
     test('an empty account list round-trips to an empty list', () async {
-      final exported = await BackupService.export([], passphrase,
-          params: testParams) as BackupExportSuccess;
+      final exported =
+          await BackupService.export([], passphrase, params: testParams)
+              as BackupExportSuccess;
 
-      final result = await BackupService.import(
-          exported.fileContent, passphrase) as BackupImportSuccess;
+      final result =
+          await BackupService.import(exported.fileContent, passphrase)
+              as BackupImportSuccess;
 
       expect(result.accounts, isEmpty);
     });

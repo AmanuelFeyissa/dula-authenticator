@@ -34,9 +34,7 @@ class SecretStoreUnavailableException implements Exception {
 class FlutterSecretStore implements SecretStore {
   final FlutterSecureStorage _storage;
 
-  const FlutterSecretStore([
-    this._storage = const FlutterSecureStorage(),
-  ]);
+  const FlutterSecretStore([this._storage = const FlutterSecureStorage()]);
 
   @override
   Future<String?> read(String key) => _storage.read(key: key);
@@ -57,8 +55,7 @@ class InMemorySecretStore implements SecretStore {
   final Map<String, String> _values;
   final Set<String> _failingKeys = <String>{};
 
-  InMemorySecretStore([Map<String, String>? initial])
-      : _values = {...?initial};
+  InMemorySecretStore([Map<String, String>? initial]) : _values = {...?initial};
 
   void failWritesTo(String key) => _failingKeys.add(key);
 

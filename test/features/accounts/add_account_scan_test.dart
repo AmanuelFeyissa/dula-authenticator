@@ -46,8 +46,9 @@ void main() {
     },
   );
 
-  testWidgets('a cancelled scan leaves the form untouched and says nothing',
-      (tester) async {
+  testWidgets('a cancelled scan leaves the form untouched and says nothing', (
+    tester,
+  ) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
 
     await tester.pumpWidget(harness((_) async => null));

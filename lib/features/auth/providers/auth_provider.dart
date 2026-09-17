@@ -88,8 +88,9 @@ class AuthState {
       isSetupRequired: isSetupRequired ?? this.isSetupRequired,
       credentialKind: credentialKind ?? this.credentialKind,
       biometricsAvailable: biometricsAvailable ?? this.biometricsAvailable,
-      isCredentialExpired:
-          clearRotation ? false : (isCredentialExpired ?? this.isCredentialExpired),
+      isCredentialExpired: clearRotation
+          ? false
+          : (isCredentialExpired ?? this.isCredentialExpired),
       isVerifiedForRotation: clearRotation
           ? false
           : (isVerifiedForRotation ?? this.isVerifiedForRotation),
@@ -121,7 +122,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   late Future<void> _ready;
 
   AuthNotifier(this._repository, this._ref)
-      : super(AuthState(isLocked: true, isSetupRequired: false)) {
+    : super(AuthState(isLocked: true, isSetupRequired: false)) {
     _ready = _checkInitialState();
   }
 
@@ -269,8 +270,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     if (!settings.biometricUnlockEnabled) return false;
     if (!await _repository.canUseBiometrics()) return false;
 
-    final approved =
-        await _repository.authenticateWithBiometrics('Unlock authenticator');
+    final approved = await _repository.authenticateWithBiometrics(
+      'Unlock authenticator',
+    );
     if (!approved) return false;
 
     final key = await _repository.getStoredMasterKey();

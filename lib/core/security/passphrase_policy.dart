@@ -43,7 +43,11 @@ class PassphrasePolicy {
   /// Sets [minLength]/[recommendedLength]/[maxLength]. Call once at startup,
   /// before any passphrase is validated. Omitted parameters keep their
   /// current value.
-  static void configure({int? minLength, int? recommendedLength, int? maxLength}) {
+  static void configure({
+    int? minLength,
+    int? recommendedLength,
+    int? maxLength,
+  }) {
     PassphrasePolicy.minLength = minLength ?? PassphrasePolicy.minLength;
     PassphrasePolicy.recommendedLength =
         recommendedLength ?? PassphrasePolicy.recommendedLength;

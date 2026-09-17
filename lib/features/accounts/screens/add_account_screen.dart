@@ -22,9 +22,9 @@ import 'package:pasteboard/pasteboard.dart';
 /// Injectable so the scan-result flow (fields filled, confirmation shown,
 /// user returned to the form) is testable without a real camera — the same
 /// seam pattern as `secureStoreProvider` in `app_lifecycle_wrapper.dart`.
-final qrScanLauncherProvider =
-    Provider<Future<String?> Function(BuildContext)>(
-  (ref) => (context) => Navigator.of(context).push<String>(
+final qrScanLauncherProvider = Provider<Future<String?> Function(BuildContext)>(
+  (ref) =>
+      (context) => Navigator.of(context).push<String>(
         MaterialPageRoute(builder: (_) => const QrScannerScreen()),
       ),
 );
@@ -75,7 +75,8 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     _digitsController.text = '${existing.digits}';
     _periodController.text = '${existing.period}';
     _counterController.text = '${existing.counter}';
-    _showAdvanced = existing.digits != 6 ||
+    _showAdvanced =
+        existing.digits != 6 ||
         existing.period != 30 ||
         existing.algorithm != OtpAlgorithm.sha1 ||
         existing.type != OtpType.totp;
@@ -108,13 +109,16 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
         _digitsController.text = '${parsed.digits}';
         _periodController.text = '${parsed.period}';
         _counterController.text = '${parsed.counter}';
-        _showAdvanced = parsed.digits != 6 ||
+        _showAdvanced =
+            parsed.digits != 6 ||
             parsed.period != 30 ||
             parsed.algorithm != OtpAlgorithm.sha1 ||
             parsed.type != OtpType.totp;
       });
-      _notify('Scanned ${parsed.type.label} credential'
-          '${parsed.issuer.isNotEmpty ? ' for ${parsed.issuer}' : ''}');
+      _notify(
+        'Scanned ${parsed.type.label} credential'
+        '${parsed.issuer.isNotEmpty ? ' for ${parsed.issuer}' : ''}',
+      );
       return;
     }
 
@@ -134,9 +138,9 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
 
   void _notify(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// Opens the scanner, then handles whatever it returns.
@@ -177,11 +181,15 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
         break;
       }
     }
-    
+
     if (!handled && mounted) {
-       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Dropped item is not a recognized image format. Please drop a valid PNG, JPG, or WEBP.')),
-       );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Dropped item is not a recognized image format. Please drop a valid PNG, JPG, or WEBP.',
+          ),
+        ),
+      );
     }
   }
 
@@ -198,9 +206,9 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to read clipboard: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to read clipboard: $e')));
     }
   }
 
@@ -209,18 +217,22 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     try {
       final resultText = await compute(_decodeImageIsolate, bytes);
       if (!mounted) return;
-      if (resultText != null && resultText.isNotEmpty && !resultText.startsWith('ALL_ATTEMPTS_FAILED_TO_FIND_QR')) {
+      if (resultText != null &&
+          resultText.isNotEmpty &&
+          !resultText.startsWith('ALL_ATTEMPTS_FAILED_TO_FIND_QR')) {
         _processFoundUrl(resultText);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not decode QR. Isolate output: $resultText')),
+          SnackBar(
+            content: Text('Could not decode QR. Isolate output: $resultText'),
+          ),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error decoding image: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error decoding image: $e')));
     } finally {
       if (mounted) {
         setState(() => _isDecoding = false);
@@ -232,7 +244,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
     try {
       final image = img.decodeImage(bytes);
       if (image == null) return "DECODE_ERROR: Image parsed as null";
-      
+
       final intList = Int32List(image.width * image.height);
       int i = 0;
       for (final p in image) {
@@ -246,8 +258,12 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
         intList[i++] = (0xFF000000 | (r << 16) | (g << 8) | b);
       }
 
-      LuminanceSource source = RGBLuminanceSource(image.width, image.height, intList);
-      
+      LuminanceSource source = RGBLuminanceSource(
+        image.width,
+        image.height,
+        intList,
+      );
+
       try {
         var hybridBitmap = BinaryBitmap(HybridBinarizer(source));
         var result = QRCodeReader().decode(hybridBitmap);
@@ -271,8 +287,13 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
         final paddedHeight = (image.height * 1.5).toInt();
         final padded = img.Image(width: paddedWidth, height: paddedHeight);
         img.fill(padded, color: img.ColorRgb8(255, 255, 255));
-        img.compositeImage(padded, image, dstX: (paddedWidth - image.width) ~/ 2, dstY: (paddedHeight - image.height) ~/ 2);
-        
+        img.compositeImage(
+          padded,
+          image,
+          dstX: (paddedWidth - image.width) ~/ 2,
+          dstY: (paddedHeight - image.height) ~/ 2,
+        );
+
         final paddedIntList = Int32List(padded.width * padded.height);
         int j = 0;
         for (final p in padded) {
@@ -285,20 +306,34 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
           }
           paddedIntList[j++] = (0xFF000000 | (r << 16) | (g << 8) | b);
         }
-        LuminanceSource paddedSource = RGBLuminanceSource(padded.width, padded.height, paddedIntList);
+        LuminanceSource paddedSource = RGBLuminanceSource(
+          padded.width,
+          padded.height,
+          paddedIntList,
+        );
         var paddedBitmap = BinaryBitmap(GlobalHistogramBinarizer(paddedSource));
         var result = QRCodeReader().decode(paddedBitmap);
         if (result.text.isNotEmpty) return result.text;
       } catch (_) {}
 
       try {
-        final scaled = img.copyResize(image, width: image.width * 2, height: image.height * 2, interpolation: img.Interpolation.nearest);
+        final scaled = img.copyResize(
+          image,
+          width: image.width * 2,
+          height: image.height * 2,
+          interpolation: img.Interpolation.nearest,
+        );
         final paddedWidth = (scaled.width * 1.5).toInt();
         final paddedHeight = (scaled.height * 1.5).toInt();
         final padded = img.Image(width: paddedWidth, height: paddedHeight);
         img.fill(padded, color: img.ColorRgb8(255, 255, 255));
-        img.compositeImage(padded, scaled, dstX: (paddedWidth - scaled.width) ~/ 2, dstY: (paddedHeight - scaled.height) ~/ 2);
-        
+        img.compositeImage(
+          padded,
+          scaled,
+          dstX: (paddedWidth - scaled.width) ~/ 2,
+          dstY: (paddedHeight - scaled.height) ~/ 2,
+        );
+
         final paddedIntList = Int32List(padded.width * padded.height);
         int j = 0;
         for (final p in padded) {
@@ -311,7 +346,11 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
           }
           paddedIntList[j++] = (0xFF000000 | (r << 16) | (g << 8) | b);
         }
-        LuminanceSource paddedSource = RGBLuminanceSource(padded.width, padded.height, paddedIntList);
+        LuminanceSource paddedSource = RGBLuminanceSource(
+          padded.width,
+          padded.height,
+          paddedIntList,
+        );
         var paddedBitmap = BinaryBitmap(GlobalHistogramBinarizer(paddedSource));
         var result = QRCodeReader().decode(paddedBitmap);
         if (result.text.isNotEmpty) return result.text;
@@ -326,8 +365,10 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   void _saveAccount() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final secret =
-        _secretController.text.trim().replaceAll(RegExp(r'[\s-]'), '').toUpperCase();
+    final secret = _secretController.text
+        .trim()
+        .replaceAll(RegExp(r'[\s-]'), '')
+        .toUpperCase();
 
     // Reject an unusable secret here rather than storing an account that can
     // never generate a code.
@@ -410,17 +451,31 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: _isDragging ? Colors.tealAccent.withValues(alpha: 0.2) : Colors.white10,
+                      color: _isDragging
+                          ? Colors.tealAccent.withValues(alpha: 0.2)
+                          : Colors.white10,
                       borderRadius: BorderRadius.circular(AppRadius.card),
-                      border: Border.all(color: _isDragging ? Colors.tealAccent : Colors.white24, style: BorderStyle.solid),
+                      border: Border.all(
+                        color: _isDragging ? Colors.tealAccent : Colors.white24,
+                        style: BorderStyle.solid,
+                      ),
                     ),
                     child: Column(
                       children: [
-                        Icon(Icons.file_upload_outlined, size: 48, color: _isDragging ? Colors.tealAccent : Colors.white54),
+                        Icon(
+                          Icons.file_upload_outlined,
+                          size: 48,
+                          color: _isDragging
+                              ? Colors.tealAccent
+                              : Colors.white54,
+                        ),
                         const SizedBox(height: 12),
                         const Text(
                           'Drag and Drop QR Image Here',
-                          style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
@@ -432,223 +487,240 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
                     Expanded(child: Divider(color: Colors.white24)),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Text('OR ENTER MANUALLY', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                      child: Text(
+                        'OR ENTER MANUALLY',
+                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
                     ),
                     Expanded(child: Divider(color: Colors.white24)),
                   ],
                 ),
                 const SizedBox(height: 24),
               ],
-                      TextFormField(
-                        controller: _issuerController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          labelText: 'Issuer (e.g. Google, GitHub)',
-                          labelStyle: TextStyle(color: Colors.white70),
-                          border: OutlineInputBorder(),
-                          enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                          prefixIcon: Icon(Icons.business, color: Colors.white70),
+              TextFormField(
+                controller: _issuerController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Issuer (e.g. Google, GitHub)',
+                  labelStyle: TextStyle(color: Colors.white70),
+                  border: OutlineInputBorder(),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white24),
+                  ),
+                  prefixIcon: Icon(Icons.business, color: Colors.white70),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _accountNameController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Account Name (e.g. user@email.com)',
+                  labelStyle: TextStyle(color: Colors.white70),
+                  border: OutlineInputBorder(),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white24),
+                  ),
+                  prefixIcon: Icon(Icons.person, color: Colors.white70),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter an account name';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _secretController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Secret Key',
+                  labelStyle: TextStyle(color: Colors.white70),
+                  border: OutlineInputBorder(),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white24),
+                  ),
+                  prefixIcon: Icon(Icons.key, color: Colors.white70),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter the setup key';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 8),
+              // Advanced parameters. A no-camera user must be able to
+              // enroll a non-default credential by hand, otherwise the
+              // manual path would only support 6/30/SHA-1 (ADR-0006).
+              Theme(
+                data: Theme.of(
+                  context,
+                ).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  initiallyExpanded: _showAdvanced,
+                  onExpansionChanged: (v) => setState(() => _showAdvanced = v),
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: const EdgeInsets.only(bottom: 8),
+                  iconColor: Colors.tealAccent,
+                  collapsedIconColor: Colors.white54,
+                  title: const Text(
+                    'Advanced options',
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    '${_type.label} - ${_algorithm.label}',
+                    style: const TextStyle(color: Colors.white38, fontSize: 12),
+                  ),
+                  children: [
+                    DropdownButtonFormField<OtpType>(
+                      initialValue: _type,
+                      dropdownColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHigh,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Code type',
+                        labelStyle: TextStyle(color: Colors.white70),
+                        border: OutlineInputBorder(),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white24),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _accountNameController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          labelText: 'Account Name (e.g. user@email.com)',
-                          labelStyle: TextStyle(color: Colors.white70),
-                          border: OutlineInputBorder(),
-                          enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                          prefixIcon: Icon(Icons.person, color: Colors.white70),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter an account name';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _secretController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          labelText: 'Secret Key',
-                          labelStyle: TextStyle(color: Colors.white70),
-                          border: OutlineInputBorder(),
-                          enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                          prefixIcon: Icon(Icons.key, color: Colors.white70),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter the setup key';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      // Advanced parameters. A no-camera user must be able to
-                      // enroll a non-default credential by hand, otherwise the
-                      // manual path would only support 6/30/SHA-1 (ADR-0006).
-                      Theme(
-                        data: Theme.of(context)
-                            .copyWith(dividerColor: Colors.transparent),
-                        child: ExpansionTile(
-                          initiallyExpanded: _showAdvanced,
-                          onExpansionChanged: (v) =>
-                              setState(() => _showAdvanced = v),
-                          tilePadding: EdgeInsets.zero,
-                          childrenPadding: const EdgeInsets.only(bottom: 8),
-                          iconColor: Colors.tealAccent,
-                          collapsedIconColor: Colors.white54,
-                          title: const Text(
-                            'Advanced options',
-                            style:
-                                TextStyle(color: Colors.white70, fontSize: 14),
-                          ),
-                          subtitle: Text(
-                            '${_type.label} - ${_algorithm.label}',
-                            style: const TextStyle(
-                                color: Colors.white38, fontSize: 12),
-                          ),
-                          children: [
-                            DropdownButtonFormField<OtpType>(
-                              initialValue: _type,
-                              dropdownColor:
-                                  Theme.of(context).colorScheme.surfaceContainerHigh,
-                              style: const TextStyle(color: Colors.white),
-                              decoration: const InputDecoration(
-                                labelText: 'Code type',
-                                labelStyle: TextStyle(color: Colors.white70),
-                                border: OutlineInputBorder(),
-                                enabledBorder: OutlineInputBorder(
-                                    borderSide:
-                                        BorderSide(color: Colors.white24)),
-                              ),
-                              items: OtpType.values
-                                  .map((t) => DropdownMenuItem(
-                                        value: t,
-                                        child: Text(t.label),
-                                      ))
-                                  .toList(),
-                              onChanged: (v) {
-                                if (v == null) return;
-                                setState(() {
-                                  _type = v;
-                                  if (v == OtpType.steam) {
-                                    _digitsController.text = '5';
-                                    _algorithm = OtpAlgorithm.sha1;
-                                  } else if (_digitsController.text == '5') {
-                                    _digitsController.text = '6';
-                                  }
-                                });
-                              },
+                      items: OtpType.values
+                          .map(
+                            (t) => DropdownMenuItem(
+                              value: t,
+                              child: Text(t.label),
                             ),
-                            const SizedBox(height: 16),
-                            DropdownButtonFormField<OtpAlgorithm>(
-                              initialValue: _algorithm,
-                              dropdownColor:
-                                  Theme.of(context).colorScheme.surfaceContainerHigh,
-                              style: const TextStyle(color: Colors.white),
-                              decoration: const InputDecoration(
-                                labelText: 'Algorithm',
-                                labelStyle: TextStyle(color: Colors.white70),
-                                border: OutlineInputBorder(),
-                                enabledBorder: OutlineInputBorder(
-                                    borderSide:
-                                        BorderSide(color: Colors.white24)),
-                              ),
-                              items: OtpAlgorithm.values
-                                  .map((a) => DropdownMenuItem(
-                                        value: a,
-                                        child: Text(a.label),
-                                      ))
-                                  .toList(),
-                              onChanged: _type == OtpType.steam
-                                  ? null
-                                  : (v) => setState(() =>
-                                      _algorithm = v ?? OtpAlgorithm.sha1),
+                          )
+                          .toList(),
+                      onChanged: (v) {
+                        if (v == null) return;
+                        setState(() {
+                          _type = v;
+                          if (v == OtpType.steam) {
+                            _digitsController.text = '5';
+                            _algorithm = OtpAlgorithm.sha1;
+                          } else if (_digitsController.text == '5') {
+                            _digitsController.text = '6';
+                          }
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<OtpAlgorithm>(
+                      initialValue: _algorithm,
+                      dropdownColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHigh,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Algorithm',
+                        labelStyle: TextStyle(color: Colors.white70),
+                        border: OutlineInputBorder(),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white24),
+                        ),
+                      ),
+                      items: OtpAlgorithm.values
+                          .map(
+                            (a) => DropdownMenuItem(
+                              value: a,
+                              child: Text(a.label),
                             ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _digitsController,
-                                    enabled: _type != OtpType.steam,
-                                    keyboardType: TextInputType.number,
-                                    style: const TextStyle(color: Colors.white),
-                                    decoration: const InputDecoration(
-                                      labelText: 'Digits',
-                                      labelStyle:
-                                          TextStyle(color: Colors.white70),
-                                      border: OutlineInputBorder(),
-                                      enabledBorder: OutlineInputBorder(
-                                          borderSide:
-                                              BorderSide(color: Colors.white24)),
+                          )
+                          .toList(),
+                      onChanged: _type == OtpType.steam
+                          ? null
+                          : (v) => setState(
+                              () => _algorithm = v ?? OtpAlgorithm.sha1,
+                            ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _digitsController,
+                            enabled: _type != OtpType.steam,
+                            keyboardType: TextInputType.number,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: const InputDecoration(
+                              labelText: 'Digits',
+                              labelStyle: TextStyle(color: Colors.white70),
+                              border: OutlineInputBorder(),
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.white24),
+                              ),
+                            ),
+                            validator: (v) {
+                              if (_type == OtpType.steam) return null;
+                              final n = int.tryParse(v ?? '');
+                              if (n == null ||
+                                  n < OtpUri.minDigits ||
+                                  n > OtpUri.maxDigits) {
+                                return 'Must be 6-10';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _type == OtpType.hotp
+                              ? TextFormField(
+                                  controller: _counterController,
+                                  keyboardType: TextInputType.number,
+                                  style: const TextStyle(color: Colors.white),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Counter',
+                                    labelStyle: TextStyle(
+                                      color: Colors.white70,
                                     ),
-                                    validator: (v) {
-                                      if (_type == OtpType.steam) return null;
-                                      final n = int.tryParse(v ?? '');
-                                      if (n == null ||
-                                          n < OtpUri.minDigits ||
-                                          n > OtpUri.maxDigits) {
-                                        return 'Must be 6-10';
-                                      }
-                                      return null;
-                                    },
+                                    border: OutlineInputBorder(),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Colors.white24,
+                                      ),
+                                    ),
                                   ),
+                                  validator: (v) =>
+                                      int.tryParse(v ?? '') == null
+                                      ? 'Must be a number'
+                                      : null,
+                                )
+                              : TextFormField(
+                                  controller: _periodController,
+                                  keyboardType: TextInputType.number,
+                                  style: const TextStyle(color: Colors.white),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Period (seconds)',
+                                    labelStyle: TextStyle(
+                                      color: Colors.white70,
+                                    ),
+                                    border: OutlineInputBorder(),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Colors.white24,
+                                      ),
+                                    ),
+                                  ),
+                                  validator: (v) {
+                                    final n = int.tryParse(v ?? '');
+                                    if (n == null || n < 1 || n > 300) {
+                                      return 'Must be 1-300';
+                                    }
+                                    return null;
+                                  },
                                 ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _type == OtpType.hotp
-                                      ? TextFormField(
-                                          controller: _counterController,
-                                          keyboardType: TextInputType.number,
-                                          style: const TextStyle(
-                                              color: Colors.white),
-                                          decoration: const InputDecoration(
-                                            labelText: 'Counter',
-                                            labelStyle: TextStyle(
-                                                color: Colors.white70),
-                                            border: OutlineInputBorder(),
-                                            enabledBorder: OutlineInputBorder(
-                                                borderSide: BorderSide(
-                                                    color: Colors.white24)),
-                                          ),
-                                          validator: (v) =>
-                                              int.tryParse(v ?? '') == null
-                                                  ? 'Must be a number'
-                                                  : null,
-                                        )
-                                      : TextFormField(
-                                          controller: _periodController,
-                                          keyboardType: TextInputType.number,
-                                          style: const TextStyle(
-                                              color: Colors.white),
-                                          decoration: const InputDecoration(
-                                            labelText: 'Period (seconds)',
-                                            labelStyle: TextStyle(
-                                                color: Colors.white70),
-                                            border: OutlineInputBorder(),
-                                            enabledBorder: OutlineInputBorder(
-                                                borderSide: BorderSide(
-                                                    color: Colors.white24)),
-                                          ),
-                                          validator: (v) {
-                                            final n = int.tryParse(v ?? '');
-                                            if (n == null || n < 1 || n > 300) {
-                                              return 'Must be 1-300';
-                                            }
-                                            return null;
-                                          },
-                                        ),
-                                ),
-                              ],
-                            ),
-                          ],
                         ),
-                      ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _saveAccount,
@@ -692,7 +764,9 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
 
     // Drag-and-drop QR import only applies to a new enrollment, and only
     // where the platform actually has a drop-target interaction to offer.
-    if (_isEditing || !EnrollmentCapabilities.dragAndDropImport) return scaffold;
+    if (_isEditing || !EnrollmentCapabilities.dragAndDropImport) {
+      return scaffold;
+    }
 
     return DropRegion(
       formats: Formats.standardFormats,

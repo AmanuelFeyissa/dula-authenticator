@@ -13,18 +13,32 @@ void main() {
 
   group('Argon2id key derivation', () {
     test('derives a 256-bit key', () async {
-      final key = await VaultCrypto.deriveKey('correct horse', salt, testParams);
+      final key = await VaultCrypto.deriveKey(
+        'correct horse',
+        salt,
+        testParams,
+      );
 
       expect(key.bytes.length, 32);
     });
 
-    test('is deterministic for the same password, salt and parameters',
-        () async {
-      final a = await VaultCrypto.deriveKey('correct horse', salt, testParams);
-      final b = await VaultCrypto.deriveKey('correct horse', salt, testParams);
+    test(
+      'is deterministic for the same password, salt and parameters',
+      () async {
+        final a = await VaultCrypto.deriveKey(
+          'correct horse',
+          salt,
+          testParams,
+        );
+        final b = await VaultCrypto.deriveKey(
+          'correct horse',
+          salt,
+          testParams,
+        );
 
-      expect(a.bytes, b.bytes);
-    });
+        expect(a.bytes, b.bytes);
+      },
+    );
 
     test('produces a different key for a different password', () async {
       final a = await VaultCrypto.deriveKey('correct horse', salt, testParams);
@@ -34,12 +48,16 @@ void main() {
     });
 
     test('produces a different key for a different salt', () async {
-      final otherSalt =
-          Uint8List.fromList(List<int>.generate(32, (i) => i + 1));
+      final otherSalt = Uint8List.fromList(
+        List<int>.generate(32, (i) => i + 1),
+      );
 
       final a = await VaultCrypto.deriveKey('correct horse', salt, testParams);
-      final b =
-          await VaultCrypto.deriveKey('correct horse', otherSalt, testParams);
+      final b = await VaultCrypto.deriveKey(
+        'correct horse',
+        otherSalt,
+        testParams,
+      );
 
       expect(a.bytes, isNot(b.bytes));
     });
@@ -60,20 +78,27 @@ void main() {
     });
 
     test('configureDefault overrides it for new vaults', () {
-      const stronger = KdfParams(memoryKiB: 65536, iterations: 3, parallelism: 2);
+      const stronger = KdfParams(
+        memoryKiB: 65536,
+        iterations: 3,
+        parallelism: 2,
+      );
       KdfParams.configureDefault(stronger);
       expect(KdfParams.deploymentDefault, stronger);
       // The fixed OWASP floor itself never moves.
       expect(KdfParams.owaspDefault.memoryKiB, 19456);
     });
 
-    test('resetForTesting restores the OWASP floor as the deployment default', () {
-      KdfParams.configureDefault(
-        const KdfParams(memoryKiB: 65536, iterations: 3, parallelism: 2),
-      );
-      KdfParams.resetForTesting();
-      expect(KdfParams.deploymentDefault, KdfParams.owaspDefault);
-    });
+    test(
+      'resetForTesting restores the OWASP floor as the deployment default',
+      () {
+        KdfParams.configureDefault(
+          const KdfParams(memoryKiB: 65536, iterations: 3, parallelism: 2),
+        );
+        KdfParams.resetForTesting();
+        expect(KdfParams.deploymentDefault, KdfParams.owaspDefault);
+      },
+    );
   });
 
   group('AES-256-GCM encryption', () {
@@ -92,13 +117,19 @@ void main() {
       expect(opened, plaintext);
     });
 
-    test('produces different ciphertext each time for the same plaintext',
-        () async {
-      final a = await VaultCrypto.encrypt('JBSWY3DPEHPK3PXP', key);
-      final b = await VaultCrypto.encrypt('JBSWY3DPEHPK3PXP', key);
+    test(
+      'produces different ciphertext each time for the same plaintext',
+      () async {
+        final a = await VaultCrypto.encrypt('JBSWY3DPEHPK3PXP', key);
+        final b = await VaultCrypto.encrypt('JBSWY3DPEHPK3PXP', key);
 
-      expect(a, isNot(b), reason: 'a fresh random nonce must be used per call');
-    });
+        expect(
+          a,
+          isNot(b),
+          reason: 'a fresh random nonce must be used per call',
+        );
+      },
+    );
 
     test('rejects ciphertext modified by an attacker', () async {
       final sealed = await VaultCrypto.encrypt('JBSWY3DPEHPK3PXP', key);
@@ -108,14 +139,20 @@ void main() {
       raw[raw.length ~/ 2] ^= 0x01;
       final tampered = base64.encode(raw);
 
-      expect(await VaultCrypto.decrypt(tampered, key), isNull,
-          reason: 'GCM must detect tampering rather than returning garbage');
+      expect(
+        await VaultCrypto.decrypt(tampered, key),
+        isNull,
+        reason: 'GCM must detect tampering rather than returning garbage',
+      );
     });
 
     test('rejects decryption with the wrong key', () async {
       final sealed = await VaultCrypto.encrypt('JBSWY3DPEHPK3PXP', key);
-      final wrongKey =
-          await VaultCrypto.deriveKey('wrong password', salt, testParams);
+      final wrongKey = await VaultCrypto.deriveKey(
+        'wrong password',
+        salt,
+        testParams,
+      );
 
       expect(await VaultCrypto.decrypt(sealed, wrongKey), isNull);
     });
@@ -129,7 +166,11 @@ void main() {
 
   group('key verifier', () {
     test('is stable for the same key', () async {
-      final key = await VaultCrypto.deriveKey('correct horse', salt, testParams);
+      final key = await VaultCrypto.deriveKey(
+        'correct horse',
+        salt,
+        testParams,
+      );
 
       expect(VaultCrypto.verifierFor(key), VaultCrypto.verifierFor(key));
     });
@@ -142,10 +183,20 @@ void main() {
     });
 
     test('does not expose the raw key material', () async {
-      final key = await VaultCrypto.deriveKey('correct horse', salt, testParams);
+      final key = await VaultCrypto.deriveKey(
+        'correct horse',
+        salt,
+        testParams,
+      );
 
-      expect(VaultCrypto.verifierFor(key), isNot(contains(base64.encode(key.bytes))));
-      expect(VaultCrypto.verifierFor(key), isNot(equals(base64.encode(key.bytes))));
+      expect(
+        VaultCrypto.verifierFor(key),
+        isNot(contains(base64.encode(key.bytes))),
+      );
+      expect(
+        VaultCrypto.verifierFor(key),
+        isNot(equals(base64.encode(key.bytes))),
+      );
     });
   });
 }

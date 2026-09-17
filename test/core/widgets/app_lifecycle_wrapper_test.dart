@@ -81,8 +81,10 @@ void main() {
       // A real vault exists behind the gate — the screen must not be setup.
       final inner = InMemorySecretStore();
       const params = KdfParams(memoryKiB: 256, iterations: 1, parallelism: 1);
-      await VaultService(inner, params: params)
-          .initialize('481629', kind: CredentialKind.pin);
+      await VaultService(
+        inner,
+        params: params,
+      ).initialize('481629', kind: CredentialKind.pin);
 
       var serviceUp = false;
       final gate = SecretStoreGate(() async => serviceUp);
@@ -110,18 +112,25 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(find.textContaining('install and enable gnome-keyring'),
-          findsOneWidget);
-      expect(find.text('How would you like to unlock?'), findsNothing,
-          reason: 'must not offer first-run setup over an existing vault');
+      expect(
+        find.textContaining('install and enable gnome-keyring'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('How would you like to unlock?'),
+        findsNothing,
+        reason: 'must not offer first-run setup over an existing vault',
+      );
 
       serviceUp = true;
       await tester.tap(find.text('RETRY'));
       await tester.pump();
       await tester.pump();
 
-      expect(find.textContaining('install and enable gnome-keyring'),
-          findsNothing);
+      expect(
+        find.textContaining('install and enable gnome-keyring'),
+        findsNothing,
+      );
 
       debugDefaultTargetPlatformOverride = null;
     },

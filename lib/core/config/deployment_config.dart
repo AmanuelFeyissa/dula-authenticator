@@ -123,44 +123,62 @@ class DeploymentConfig {
   /// wholesale.
   static DeploymentConfig parse(String raw) {
     final json = jsonDecode(raw) as Map<String, dynamic>;
-    final security =
-        json['security'] is Map ? json['security'] as Map<String, dynamic> : const {};
-    final backup =
-        json['backup'] is Map ? json['backup'] as Map<String, dynamic> : const {};
-    final ui = json['ui'] is Map ? json['ui'] as Map<String, dynamic> : const {};
+    final security = json['security'] is Map
+        ? json['security'] as Map<String, dynamic>
+        : const {};
+    final backup = json['backup'] is Map
+        ? json['backup'] as Map<String, dynamic>
+        : const {};
+    final ui = json['ui'] is Map
+        ? json['ui'] as Map<String, dynamic>
+        : const {};
 
     return DeploymentConfig(
-      pinLength: _intAtLeast(security['pinLength'], _minPinLength) ?? fallback.pinLength,
-      passphraseMinLength: _intAtLeast(
-              security['passphraseMinLength'], _minPassphraseMinLength) ??
+      pinLength:
+          _intAtLeast(security['pinLength'], _minPinLength) ??
+          fallback.pinLength,
+      passphraseMinLength:
+          _intAtLeast(
+            security['passphraseMinLength'],
+            _minPassphraseMinLength,
+          ) ??
           fallback.passphraseMinLength,
-      passphraseRecommendedLength: _int(security['passphraseRecommendedLength']) ??
+      passphraseRecommendedLength:
+          _int(security['passphraseRecommendedLength']) ??
           fallback.passphraseRecommendedLength,
       passphraseMaxLength:
           _int(security['passphraseMaxLength']) ?? fallback.passphraseMaxLength,
-      argon2MemoryKiB: _intAtLeast(security['argon2MemoryKiB'], _minArgon2MemoryKiB) ??
+      argon2MemoryKiB:
+          _intAtLeast(security['argon2MemoryKiB'], _minArgon2MemoryKiB) ??
           fallback.argon2MemoryKiB,
       argon2Iterations:
           _intAtLeast(security['argon2Iterations'], _minArgon2Iterations) ??
-              fallback.argon2Iterations,
+          fallback.argon2Iterations,
       argon2Parallelism:
           _intAtLeast(security['argon2Parallelism'], _minArgon2Parallelism) ??
-              fallback.argon2Parallelism,
-      lockoutSteps: _parseLockoutSteps(security['lockoutSteps']) ?? fallback.lockoutSteps,
+          fallback.argon2Parallelism,
+      lockoutSteps:
+          _parseLockoutSteps(security['lockoutSteps']) ?? fallback.lockoutSteps,
       defaultAutoLock:
-          _parseAutoLock(security['defaultAutoLock']) ?? fallback.defaultAutoLock,
-      credentialRotationDefaultDays: _int(security['credentialRotationDefaultDays']) ??
+          _parseAutoLock(security['defaultAutoLock']) ??
+          fallback.defaultAutoLock,
+      credentialRotationDefaultDays:
+          _int(security['credentialRotationDefaultDays']) ??
           fallback.credentialRotationDefaultDays,
-      credentialRotationMinDays: _int(security['credentialRotationMinDays']) ??
+      credentialRotationMinDays:
+          _int(security['credentialRotationMinDays']) ??
           fallback.credentialRotationMinDays,
-      credentialRotationMaxDays: _int(security['credentialRotationMaxDays']) ??
+      credentialRotationMaxDays:
+          _int(security['credentialRotationMaxDays']) ??
           fallback.credentialRotationMaxDays,
       credentialRotationOptionsDays:
           _parseIntList(security['credentialRotationOptionsDays']) ??
-              fallback.credentialRotationOptionsDays,
-      backupFileNamePrefix:
-          backup['fileNamePrefix'] is String ? backup['fileNamePrefix'] as String : null,
-      copiedToClipboardSnackbarSeconds: _int(ui['copiedToClipboardSnackbarSeconds']) ??
+          fallback.credentialRotationOptionsDays,
+      backupFileNamePrefix: backup['fileNamePrefix'] is String
+          ? backup['fileNamePrefix'] as String
+          : null,
+      copiedToClipboardSnackbarSeconds:
+          _int(ui['copiedToClipboardSnackbarSeconds']) ??
           fallback.copiedToClipboardSnackbarSeconds,
     );
   }
@@ -191,7 +209,12 @@ class DeploymentConfig {
       final attempts = _int(item['attempts']);
       final seconds = _int(item['seconds']);
       if (attempts == null || seconds == null) return null;
-      steps.add(LockoutStep(attempts: attempts, lockoutDuration: Duration(seconds: seconds)));
+      steps.add(
+        LockoutStep(
+          attempts: attempts,
+          lockoutDuration: Duration(seconds: seconds),
+        ),
+      );
     }
     return steps;
   }

@@ -24,8 +24,11 @@ class KdfParams {
   /// m = 19456 KiB (19 MiB), t = 2, p = 1. Fixed — this is the security
   /// floor, not a deployer-adjustable value. New vaults use
   /// [deploymentDefault] instead, which starts equal to this.
-  static const KdfParams owaspDefault =
-      KdfParams(memoryKiB: 19456, iterations: 2, parallelism: 1);
+  static const KdfParams owaspDefault = KdfParams(
+    memoryKiB: 19456,
+    iterations: 2,
+    parallelism: 1,
+  );
 
   /// Parameters used for newly created vaults. Deployer-configurable via
   /// `assets/config/deployment_config.json`'s `security.argon2*` fields (see
@@ -48,17 +51,17 @@ class KdfParams {
   }
 
   Map<String, dynamic> toMap() => {
-        'alg': 'argon2id',
-        'm': memoryKiB,
-        't': iterations,
-        'p': parallelism,
-      };
+    'alg': 'argon2id',
+    'm': memoryKiB,
+    't': iterations,
+    'p': parallelism,
+  };
 
   factory KdfParams.fromMap(Map<String, dynamic> map) => KdfParams(
-        memoryKiB: map['m'] as int? ?? owaspDefault.memoryKiB,
-        iterations: map['t'] as int? ?? owaspDefault.iterations,
-        parallelism: map['p'] as int? ?? owaspDefault.parallelism,
-      );
+    memoryKiB: map['m'] as int? ?? owaspDefault.memoryKiB,
+    iterations: map['t'] as int? ?? owaspDefault.iterations,
+    parallelism: map['p'] as int? ?? owaspDefault.parallelism,
+  );
 
   @override
   bool operator ==(Object other) =>

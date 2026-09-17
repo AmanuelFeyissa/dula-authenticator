@@ -155,12 +155,18 @@ void main() {
       expect(find.text('Create 6-Digit PIN'), findsOneWidget);
       await enterPin(tester, pin);
 
-      expect(find.text('Confirm PIN'), findsOneWidget,
-          reason: 'setup must ask for confirmation');
+      expect(
+        find.text('Confirm PIN'),
+        findsOneWidget,
+        reason: 'setup must ask for confirmation',
+      );
       await enterPin(tester, pin);
 
-      expect(find.text('No Accounts Yet'), findsOneWidget,
-          reason: 'a completed setup lands on the account list');
+      expect(
+        find.text('No Accounts Yet'),
+        findsOneWidget,
+        reason: 'a completed setup lands on the account list',
+      );
       expect(await vault.credentialKind(), CredentialKind.pin);
     });
 
@@ -175,8 +181,11 @@ void main() {
       await enterPassphrase(tester, passphrase, 'Confirm');
 
       expect(find.text('No Accounts Yet'), findsOneWidget);
-      expect(await vault.credentialKind(), CredentialKind.passphrase,
-          reason: 'the lock screen needs this to show a text field');
+      expect(
+        await vault.credentialKind(),
+        CredentialKind.passphrase,
+        reason: 'the lock screen needs this to show a text field',
+      );
     });
 
     testWidgets('rejects a weak PIN before it is ever stored', (tester) async {
@@ -188,14 +197,21 @@ void main() {
       await enterPin(tester, '123456');
 
       expect(find.textContaining('too common'), findsOneWidget);
-      expect(find.text('Confirm PIN'), findsNothing,
-          reason: 'a rejected PIN must not advance to confirmation');
-      expect(await vault.isInitialized(), isFalse,
-          reason: 'a rejected PIN must not create a vault');
+      expect(
+        find.text('Confirm PIN'),
+        findsNothing,
+        reason: 'a rejected PIN must not advance to confirmation',
+      );
+      expect(
+        await vault.isInitialized(),
+        isFalse,
+        reason: 'a rejected PIN must not create a vault',
+      );
     });
 
-    testWidgets('rejects a short passphrase before it is ever stored',
-        (tester) async {
+    testWidgets('rejects a short passphrase before it is ever stored', (
+      tester,
+    ) async {
       await pumpApp(tester);
       await chooseKind(tester, CredentialKind.passphrase);
 
@@ -205,8 +221,9 @@ void main() {
       expect(await vault.isInitialized(), isFalse);
     });
 
-    testWidgets('mismatched confirmation does not create a vault',
-        (tester) async {
+    testWidgets('mismatched confirmation does not create a vault', (
+      tester,
+    ) async {
       await pumpApp(tester);
       await chooseKind(tester, CredentialKind.pin);
 
@@ -217,29 +234,37 @@ void main() {
       expect(await vault.isInitialized(), isFalse);
     });
 
-    testWidgets('offers biometrics only where the platform supports them',
-        (tester) async {
+    testWidgets('offers biometrics only where the platform supports them', (
+      tester,
+    ) async {
       await pumpApp(tester, biometrics: const _StubBiometrics(available: true));
       await chooseKind(tester, CredentialKind.pin);
       await enterPin(tester, pin);
       await enterPin(tester, pin);
 
-      expect(find.text('Unlock with biometrics?'), findsOneWidget,
-          reason: 'a capable device should be offered the faster unlock');
+      expect(
+        find.text('Unlock with biometrics?'),
+        findsOneWidget,
+        reason: 'a capable device should be offered the faster unlock',
+      );
 
       // Declining must still complete setup — biometrics are never required.
       await tester.tap(find.text('Not now'));
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
       expect(find.text('No Accounts Yet'), findsOneWidget);
-      expect(await store.read(AuthRepository.masterKeyKey), isNull,
-          reason: 'declining biometrics must not cache the vault key');
+      expect(
+        await store.read(AuthRepository.masterKeyKey),
+        isNull,
+        reason: 'declining biometrics must not cache the vault key',
+      );
     });
   });
 
   group('unlocking', () {
-    testWidgets('stored accounts appear with a live code after unlock',
-        (tester) async {
+    testWidgets('stored accounts appear with a live code after unlock', (
+      tester,
+    ) async {
       // Seed the vault as a returning user with two enrolled accounts.
       final key = await vault.initialize(pin, kind: CredentialKind.pin);
       await accounts.addAccount(
@@ -262,8 +287,11 @@ void main() {
       );
 
       await pumpApp(tester);
-      expect(find.text('Enter PIN'), findsOneWidget,
-          reason: 'an existing vault must be locked on launch');
+      expect(
+        find.text('Enter PIN'),
+        findsOneWidget,
+        reason: 'an existing vault must be locked on launch',
+      );
 
       await enterPin(tester, pin);
 
@@ -282,15 +310,19 @@ void main() {
       expect(codeFinder, findsNWidgets(2));
     });
 
-    testWidgets('a passphrase vault asks for a passphrase, not a keypad',
-        (tester) async {
+    testWidgets('a passphrase vault asks for a passphrase, not a keypad', (
+      tester,
+    ) async {
       await vault.initialize(passphrase, kind: CredentialKind.passphrase);
 
       await pumpApp(tester);
 
       expect(find.text('Enter Passphrase'), findsOneWidget);
-      expect(find.widgetWithText(InkWell, '1'), findsNothing,
-          reason: 'a keypad cannot express a passphrase');
+      expect(
+        find.widgetWithText(InkWell, '1'),
+        findsNothing,
+        reason: 'a keypad cannot express a passphrase',
+      );
 
       await tester.enterText(find.byType(TextField).first, passphrase);
       await tester.pumpAndSettle();
@@ -300,8 +332,9 @@ void main() {
       expect(find.text('No Accounts Yet'), findsOneWidget);
     });
 
-    testWidgets('an enabled fingerprint opens the vault on launch',
-        (tester) async {
+    testWidgets('an enabled fingerprint opens the vault on launch', (
+      tester,
+    ) async {
       // Set up with biometrics accepted, then relaunch: the lock screen
       // prompts on its own and the cached key opens the vault.
       await pumpApp(tester, biometrics: const _StubBiometrics(available: true));
@@ -317,8 +350,9 @@ void main() {
       expect(find.text('No Accounts Yet'), findsOneWidget);
     });
 
-    testWidgets('a refused fingerprint leaves the credential in charge',
-        (tester) async {
+    testWidgets('a refused fingerprint leaves the credential in charge', (
+      tester,
+    ) async {
       await pumpApp(tester, biometrics: const _StubBiometrics(available: true));
       await chooseKind(tester, CredentialKind.pin);
       await enterPin(tester, pin);
@@ -332,8 +366,11 @@ void main() {
       );
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
-      expect(find.text('Enter PIN'), findsOneWidget,
-          reason: 'a failed fingerprint must fall back, never let you in');
+      expect(
+        find.text('Enter PIN'),
+        findsOneWidget,
+        reason: 'a failed fingerprint must fall back, never let you in',
+      );
 
       // And the PIN still works, which is the guarantee that matters.
       await enterPin(tester, pin);
@@ -350,8 +387,9 @@ void main() {
       expect(find.text('No Accounts Yet'), findsNothing);
     });
 
-    testWidgets('secrets are unreadable without the right credential',
-        (tester) async {
+    testWidgets('secrets are unreadable without the right credential', (
+      tester,
+    ) async {
       final key = await vault.initialize(pin, kind: CredentialKind.pin);
       await accounts.addAccount(
         OtpAccount(
@@ -373,8 +411,9 @@ void main() {
       expect(loaded.single.secret, isNot('JBSWY3DPEHPK3PXP'));
     });
 
-    testWidgets('unlock at production KDF cost stays responsive',
-        (tester) async {
+    testWidgets('unlock at production KDF cost stays responsive', (
+      tester,
+    ) async {
       await vault.initialize(pin, kind: CredentialKind.pin);
 
       final stopwatch = Stopwatch()..start();
@@ -383,15 +422,18 @@ void main() {
 
       expect(result.isUnlocked, isTrue);
       // ignore: avoid_print
-      print('Production unlock took ${stopwatch.elapsedMilliseconds} ms '
-          '(Argon2id m=${KdfParams.owaspDefault.memoryKiB} KiB)');
+      print(
+        'Production unlock took ${stopwatch.elapsedMilliseconds} ms '
+        '(Argon2id m=${KdfParams.owaspDefault.memoryKiB} KiB)',
+      );
       expect(stopwatch.elapsedMilliseconds, lessThan(3000));
     });
   });
 
   group('OTP types', () {
-    testWidgets('renders an 8-digit SHA-256 credential correctly',
-        (tester) async {
+    testWidgets('renders an 8-digit SHA-256 credential correctly', (
+      tester,
+    ) async {
       // Regression guard for the parameter-dropping bug: digits/period/
       // algorithm used to be parsed and then discarded, so a credential like
       // this rendered a 6-digit SHA-1 code — plausible, and wrong.
@@ -409,10 +451,12 @@ void main() {
       expect(find.text('Bank'), findsOneWidget);
       // 8-digit codes are grouped 4+4.
       expect(
-        find.byWidgetPredicate((w) =>
-            w is Text &&
-            w.data != null &&
-            RegExp(r'^\d{4} \d{4}$').hasMatch(w.data!)),
+        find.byWidgetPredicate(
+          (w) =>
+              w is Text &&
+              w.data != null &&
+              RegExp(r'^\d{4} \d{4}$').hasMatch(w.data!),
+        ),
         findsOneWidget,
       );
 
@@ -422,8 +466,9 @@ void main() {
       expect(stored.algorithm, OtpAlgorithm.sha256);
     });
 
-    testWidgets('renders a Steam credential as five characters',
-        (tester) async {
+    testWidgets('renders a Steam credential as five characters', (
+      tester,
+    ) async {
       final key = await vault.initialize(pin, kind: CredentialKind.pin);
       await accounts.addAccount(
         OtpUri.parse(
@@ -437,10 +482,12 @@ void main() {
       await enterPin(tester, pin);
 
       expect(
-        find.byWidgetPredicate((w) =>
-            w is Text &&
-            w.data != null &&
-            RegExp(r'^[23456789BCDFGHJKMNPQRTVWXY]{5}$').hasMatch(w.data!)),
+        find.byWidgetPredicate(
+          (w) =>
+              w is Text &&
+              w.data != null &&
+              RegExp(r'^[23456789BCDFGHJKMNPQRTVWXY]{5}$').hasMatch(w.data!),
+        ),
         findsOneWidget,
       );
     });
@@ -466,29 +513,33 @@ void main() {
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
       final stored = (await accounts.getAccounts(masterKey: key)).single;
-      expect(stored.counter, 1,
-          reason: 'advancing must persist the new counter');
+      expect(
+        stored.counter,
+        1,
+        reason: 'advancing must persist the new counter',
+      );
     });
   });
 
   group('account management', () {
-    testWidgets('search narrows the list to matching accounts',
-        (tester) async {
+    testWidgets('search narrows the list to matching accounts', (tester) async {
       final key = await vault.initialize(pin, kind: CredentialKind.pin);
       await accounts.addAccount(
         OtpAccount(
-            id: '1',
-            issuer: 'GitHub',
-            accountName: 'dev@example.com',
-            secret: 'JBSWY3DPEHPK3PXP'),
+          id: '1',
+          issuer: 'GitHub',
+          accountName: 'dev@example.com',
+          secret: 'JBSWY3DPEHPK3PXP',
+        ),
         masterKey: key,
       );
       await accounts.addAccount(
         OtpAccount(
-            id: '2',
-            issuer: 'AWS',
-            accountName: 'ops@example.com',
-            secret: 'KRSXG5CTMVRXEZLU'),
+          id: '2',
+          issuer: 'AWS',
+          accountName: 'ops@example.com',
+          secret: 'KRSXG5CTMVRXEZLU',
+        ),
         masterKey: key,
       );
 
@@ -505,23 +556,26 @@ void main() {
       expect(find.text('AWS'), findsNothing);
     });
 
-    testWidgets('toggling favorite persists and filters via the chip',
-        (tester) async {
+    testWidgets('toggling favorite persists and filters via the chip', (
+      tester,
+    ) async {
       final key = await vault.initialize(pin, kind: CredentialKind.pin);
       await accounts.addAccount(
         OtpAccount(
-            id: '1',
-            issuer: 'GitHub',
-            accountName: 'dev@example.com',
-            secret: 'JBSWY3DPEHPK3PXP'),
+          id: '1',
+          issuer: 'GitHub',
+          accountName: 'dev@example.com',
+          secret: 'JBSWY3DPEHPK3PXP',
+        ),
         masterKey: key,
       );
       await accounts.addAccount(
         OtpAccount(
-            id: '2',
-            issuer: 'AWS',
-            accountName: 'ops@example.com',
-            secret: 'KRSXG5CTMVRXEZLU'),
+          id: '2',
+          issuer: 'AWS',
+          accountName: 'ops@example.com',
+          secret: 'KRSXG5CTMVRXEZLU',
+        ),
         masterKey: key,
       );
 
@@ -543,15 +597,17 @@ void main() {
       expect(find.text('AWS'), findsNothing);
     });
 
-    testWidgets('adding a tag persists and appears as a filter chip',
-        (tester) async {
+    testWidgets('adding a tag persists and appears as a filter chip', (
+      tester,
+    ) async {
       final key = await vault.initialize(pin, kind: CredentialKind.pin);
       await accounts.addAccount(
         OtpAccount(
-            id: '1',
-            issuer: 'GitHub',
-            accountName: 'dev@example.com',
-            secret: 'JBSWY3DPEHPK3PXP'),
+          id: '1',
+          issuer: 'GitHub',
+          accountName: 'dev@example.com',
+          secret: 'JBSWY3DPEHPK3PXP',
+        ),
         masterKey: key,
       );
 
@@ -569,21 +625,22 @@ void main() {
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
-      final stored =
-          (await accounts.getAccounts(masterKey: key)).single;
+      final stored = (await accounts.getAccounts(masterKey: key)).single;
       expect(stored.tags, ['work']);
       expect(find.widgetWithText(FilterChip, 'work'), findsOneWidget);
     });
 
-    testWidgets('editing an account persists the change without a new id',
-        (tester) async {
+    testWidgets('editing an account persists the change without a new id', (
+      tester,
+    ) async {
       final key = await vault.initialize(pin, kind: CredentialKind.pin);
       await accounts.addAccount(
         OtpAccount(
-            id: '1',
-            issuer: 'GitHub',
-            accountName: 'dev@example.com',
-            secret: 'JBSWY3DPEHPK3PXP'),
+          id: '1',
+          issuer: 'GitHub',
+          accountName: 'dev@example.com',
+          secret: 'JBSWY3DPEHPK3PXP',
+        ),
         masterKey: key,
       );
 
@@ -596,46 +653,55 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Edit Account'), findsOneWidget);
-      expect(find.text('Scan QR Code with Camera'), findsNothing,
-          reason: 'there is nothing to scan when editing text fields');
+      expect(
+        find.text('Scan QR Code with Camera'),
+        findsNothing,
+        reason: 'there is nothing to scan when editing text fields',
+      );
 
-      final issuerField = find.widgetWithText(TextFormField,
-          'Issuer (e.g. Google, GitHub)');
+      final issuerField = find.widgetWithText(
+        TextFormField,
+        'Issuer (e.g. Google, GitHub)',
+      );
       await tester.enterText(issuerField, 'GitHub Enterprise');
       await tester.tap(find.text('SAVE CHANGES'));
       await tester.pumpAndSettle();
 
-      final stored =
-          (await accounts.getAccounts(masterKey: key)).single;
+      final stored = (await accounts.getAccounts(masterKey: key)).single;
       expect(stored.id, '1', reason: 'editing must not create a new account');
       expect(stored.issuer, 'GitHub Enterprise');
       expect(stored.secret, 'JBSWY3DPEHPK3PXP');
     });
 
-    testWidgets('a corrupted account is isolated, not blocking the list',
-        (tester) async {
+    testWidgets('a corrupted account is isolated, not blocking the list', (
+      tester,
+    ) async {
       final key = await vault.initialize(pin, kind: CredentialKind.pin);
       await accounts.addAccount(
         OtpAccount(
-            id: '1',
-            issuer: 'GitHub',
-            accountName: 'dev@example.com',
-            secret: 'JBSWY3DPEHPK3PXP'),
+          id: '1',
+          issuer: 'GitHub',
+          accountName: 'dev@example.com',
+          secret: 'JBSWY3DPEHPK3PXP',
+        ),
         masterKey: key,
       );
       await accounts.addAccount(
         OtpAccount(
-            id: '2',
-            issuer: 'AWS',
-            accountName: 'ops@example.com',
-            secret: 'KRSXG5CTMVRXEZLU'),
+          id: '2',
+          issuer: 'AWS',
+          accountName: 'ops@example.com',
+          secret: 'KRSXG5CTMVRXEZLU',
+        ),
         masterKey: key,
       );
 
       // Corrupt the second account's ciphertext directly in storage.
-      final raw = jsonDecode(await store.read(VaultService.accountsKey) as String)
-          as List;
-      final entry = raw.firstWhere((e) => e['id'] == '2') as Map<String, dynamic>;
+      final raw =
+          jsonDecode(await store.read(VaultService.accountsKey) as String)
+              as List;
+      final entry =
+          raw.firstWhere((e) => e['id'] == '2') as Map<String, dynamic>;
       final sealed = base64.decode(entry['secret'] as String);
       sealed[sealed.length ~/ 2] ^= 0x01;
       entry['secret'] = base64.encode(sealed);
@@ -647,7 +713,10 @@ void main() {
       // The healthy account still renders normally...
       expect(find.text('GitHub'), findsOneWidget);
       final codeFinder = find.byWidgetPredicate(
-        (w) => w is Text && w.data != null && RegExp(r'^\d{3} \d{3}$').hasMatch(w.data!),
+        (w) =>
+            w is Text &&
+            w.data != null &&
+            RegExp(r'^\d{3} \d{3}$').hasMatch(w.data!),
       );
       expect(codeFinder, findsOneWidget);
 
@@ -680,26 +749,31 @@ void main() {
       final key = await vault.initialize(pin, kind: CredentialKind.pin);
       await accounts.addAccount(
         OtpAccount(
-            id: '1',
-            issuer: 'One',
-            accountName: 'a@example.com',
-            secret: 'JBSWY3DPEHPK3PXP'),
+          id: '1',
+          issuer: 'One',
+          accountName: 'a@example.com',
+          secret: 'JBSWY3DPEHPK3PXP',
+        ),
         masterKey: key,
       );
       await accounts.addAccount(
         OtpAccount(
-            id: '2',
-            issuer: 'Two',
-            accountName: 'b@example.com',
-            secret: 'KRSXG5CTMVRXEZLU'),
+          id: '2',
+          issuer: 'Two',
+          accountName: 'b@example.com',
+          secret: 'KRSXG5CTMVRXEZLU',
+        ),
         masterKey: key,
       );
 
       await pumpApp(tester);
       await enterPin(tester, pin);
 
-      expect(find.byType(ReorderableListView), findsOneWidget,
-          reason: 'the unfiltered list must be manually reorderable');
+      expect(
+        find.byType(ReorderableListView),
+        findsOneWidget,
+        reason: 'the unfiltered list must be manually reorderable',
+      );
 
       // A single tester.drag() does not reliably register as a reorder
       // gesture on ReorderableListView — it needs a held pointer with
@@ -740,8 +814,9 @@ void main() {
       expect(find.text('Change PIN or passphrase'), findsOneWidget);
     });
 
-    testWidgets('explain rather than offer biometrics where unsupported',
-        (tester) async {
+    testWidgets('explain rather than offer biometrics where unsupported', (
+      tester,
+    ) async {
       await vault.initialize(pin, kind: CredentialKind.pin);
       await pumpApp(tester);
       await enterPin(tester, pin);
@@ -752,8 +827,11 @@ void main() {
         find.textContaining('Not available on this device'),
         findsOneWidget,
       );
-      expect(find.byType(SwitchListTile), findsOneWidget,
-          reason: 'only the rotation switch should remain');
+      expect(
+        find.byType(SwitchListTile),
+        findsOneWidget,
+        reason: 'only the rotation switch should remain',
+      );
     });
 
     testWidgets('the auto-lock delay persists', (tester) async {
@@ -776,8 +854,11 @@ void main() {
       await enterPin(tester, pin);
       await openSettings(tester);
 
-      expect(find.text('Off — recommended'), findsOneWidget,
-          reason: 'NIST advises against forced rotation; it must be opt-in');
+      expect(
+        find.text('Off — recommended'),
+        findsOneWidget,
+        reason: 'NIST advises against forced rotation; it must be opt-in',
+      );
     });
   });
 
@@ -832,8 +913,9 @@ void main() {
       expect(stored.single.secret, 'JBSWY3DPEHPK3PXP');
     });
 
-    testWidgets('a batch migration code lets the user deselect entries',
-        (tester) async {
+    testWidgets('a batch migration code lets the user deselect entries', (
+      tester,
+    ) async {
       await vault.initialize(pin, kind: CredentialKind.pin);
       await pumpApp(tester);
       await enterPin(tester, pin);
@@ -867,8 +949,9 @@ void main() {
       expect(stored.map((a) => a.issuer), ['One']);
     });
 
-    testWidgets('an unreadable code shows an error and imports nothing',
-        (tester) async {
+    testWidgets('an unreadable code shows an error and imports nothing', (
+      tester,
+    ) async {
       await vault.initialize(pin, kind: CredentialKind.pin);
       await pumpApp(tester);
       await enterPin(tester, pin);
@@ -890,35 +973,37 @@ void main() {
       expect(await accounts.getAccounts(masterKey: key), isEmpty);
     });
 
-    testWidgets('importing the same code twice treats the second as a duplicate',
-        (tester) async {
-      final key = await vault.initialize(pin, kind: CredentialKind.pin);
-      await accounts.addAccount(
-        OtpAccount(
-          id: 'seed',
-          issuer: 'GitHub',
-          accountName: 'dev@example.com',
-          secret: 'JBSWY3DPEHPK3PXP',
-        ),
-        masterKey: key,
-      );
+    testWidgets(
+      'importing the same code twice treats the second as a duplicate',
+      (tester) async {
+        final key = await vault.initialize(pin, kind: CredentialKind.pin);
+        await accounts.addAccount(
+          OtpAccount(
+            id: 'seed',
+            issuer: 'GitHub',
+            accountName: 'dev@example.com',
+            secret: 'JBSWY3DPEHPK3PXP',
+          ),
+          masterKey: key,
+        );
 
-      await pumpApp(tester);
-      await enterPin(tester, pin);
-      await openImportScreen(tester);
+        await pumpApp(tester);
+        await enterPin(tester, pin);
+        await openImportScreen(tester);
 
-      await tester.enterText(
-        find.byType(TextField).first,
-        'otpauth://totp/GitHub:dev@example.com?secret=JBSWY3DPEHPK3PXP',
-      );
-      await tester.ensureVisible(find.text('Import from code'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Import from code'));
-      await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byType(TextField).first,
+          'otpauth://totp/GitHub:dev@example.com?secret=JBSWY3DPEHPK3PXP',
+        );
+        await tester.ensureVisible(find.text('Import from code'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Import from code'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('ALREADY IN YOUR VAULT (1)'), findsOneWidget);
-      expect(find.text('NEW ('), findsNothing);
-    });
+        expect(find.text('ALREADY IN YOUR VAULT (1)'), findsOneWidget);
+        expect(find.text('NEW ('), findsNothing);
+      },
+    );
   });
 }
 
@@ -946,8 +1031,11 @@ String _migrationUriWith({required List<String> issuers}) {
   List<int> tag(int fieldNumber, int wireType) =>
       varint((fieldNumber << 3) | wireType);
 
-  List<int> lengthDelimited(int fieldNumber, List<int> data) =>
-      [...tag(fieldNumber, 2), ...varint(data.length), ...data];
+  List<int> lengthDelimited(int fieldNumber, List<int> data) => [
+    ...tag(fieldNumber, 2),
+    ...varint(data.length),
+    ...data,
+  ];
 
   final secretBytes = base32.decode('JBSWY3DPEHPK3PXP');
   final payload = <int>[];

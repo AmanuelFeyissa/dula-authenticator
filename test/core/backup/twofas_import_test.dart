@@ -13,14 +13,14 @@ import 'package:dula_auth/core/otp/otp_type.dart';
 /// plaintext `services` array of {name, secret, otp{...}} when not
 /// password-protected.
 String _plaintextExport(List<Map<String, dynamic>> services) => jsonEncode({
-      'schemaVersion': 4,
-      'appVersionCode': 100,
-      'appVersionName': '5.0.0',
-      'appOrigin': 'android',
-      'servicesEncrypted': null,
-      'reference': 'ref-1',
-      'services': services,
-    });
+  'schemaVersion': 4,
+  'appVersionCode': 100,
+  'appVersionName': '5.0.0',
+  'appOrigin': 'android',
+  'servicesEncrypted': null,
+  'reference': 'ref-1',
+  'services': services,
+});
 
 Map<String, dynamic> _service({
   String name = '',
@@ -32,21 +32,20 @@ Map<String, dynamic> _service({
   int? counter,
   String algorithm = 'SHA1',
   String tokenType = 'TOTP',
-}) =>
-    {
-      'name': name,
-      'secret': secret,
-      'updatedAt': 1700000000000,
-      'otp': {
-        'account': account,
-        'issuer': issuer,
-        'digits': digits,
-        'period': ?period,
-        'counter': ?counter,
-        'algorithm': algorithm,
-        'tokenType': tokenType,
-      },
-    };
+}) => {
+  'name': name,
+  'secret': secret,
+  'updatedAt': 1700000000000,
+  'otp': {
+    'account': account,
+    'issuer': issuer,
+    'digits': digits,
+    'period': ?period,
+    'counter': ?counter,
+    'algorithm': algorithm,
+    'tokenType': tokenType,
+  },
+};
 
 void main() {
   var counter = 0;
@@ -72,11 +71,12 @@ void main() {
     });
 
     test('falls back to the service name when otp.account is blank', () {
-      final export =
-          _plaintextExport([_service(name: 'Backup Codes', account: '')]);
+      final export = _plaintextExport([
+        _service(name: 'Backup Codes', account: ''),
+      ]);
 
-      final result = TwoFasImport.parse(export, newId: nextId)
-          as ThirdPartyImportSuccess;
+      final result =
+          TwoFasImport.parse(export, newId: nextId) as ThirdPartyImportSuccess;
 
       expect(result.accounts.single.accountName, 'Backup Codes');
     });
@@ -86,19 +86,20 @@ void main() {
         _service(tokenType: 'HOTP', counter: 3, period: null),
       ]);
 
-      final result = TwoFasImport.parse(export, newId: nextId)
-          as ThirdPartyImportSuccess;
+      final result =
+          TwoFasImport.parse(export, newId: nextId) as ThirdPartyImportSuccess;
 
       expect(result.accounts.single.type, OtpType.hotp);
       expect(result.accounts.single.counter, 3);
     });
 
     test('decodes a Steam service', () {
-      final export =
-          _plaintextExport([_service(tokenType: 'STEAM', digits: 5)]);
+      final export = _plaintextExport([
+        _service(tokenType: 'STEAM', digits: 5),
+      ]);
 
-      final result = TwoFasImport.parse(export, newId: nextId)
-          as ThirdPartyImportSuccess;
+      final result =
+          TwoFasImport.parse(export, newId: nextId) as ThirdPartyImportSuccess;
 
       expect(result.accounts.single.type, OtpType.steam);
     });
@@ -111,10 +112,14 @@ void main() {
       };
       for (final entry in cases.entries) {
         final export = _plaintextExport([_service(algorithm: entry.key)]);
-        final result = TwoFasImport.parse(export, newId: nextId)
-            as ThirdPartyImportSuccess;
-        expect(result.accounts.single.algorithm, entry.value,
-            reason: entry.key);
+        final result =
+            TwoFasImport.parse(export, newId: nextId)
+                as ThirdPartyImportSuccess;
+        expect(
+          result.accounts.single.algorithm,
+          entry.value,
+          reason: entry.key,
+        );
       }
     });
 
@@ -125,8 +130,8 @@ void main() {
         _service(issuer: 'Three'),
       ]);
 
-      final result = TwoFasImport.parse(export, newId: nextId)
-          as ThirdPartyImportSuccess;
+      final result =
+          TwoFasImport.parse(export, newId: nextId) as ThirdPartyImportSuccess;
 
       expect(result.accounts.map((a) => a.issuer), ['One', 'Two', 'Three']);
     });
@@ -157,13 +162,17 @@ void main() {
 
   group('hostile input', () {
     test('rejects input that is not JSON', () {
-      expect(TwoFasImport.parse('not json', newId: nextId),
-          isA<ThirdPartyImportUnrecognized>());
+      expect(
+        TwoFasImport.parse('not json', newId: nextId),
+        isA<ThirdPartyImportUnrecognized>(),
+      );
     });
 
     test('rejects JSON with no services field and no servicesEncrypted', () {
       final result = TwoFasImport.parse(
-          jsonEncode({'schemaVersion': 4}), newId: nextId);
+        jsonEncode({'schemaVersion': 4}),
+        newId: nextId,
+      );
       expect(result, isA<ThirdPartyImportUnrecognized>());
     });
 

@@ -50,25 +50,23 @@ void main() {
       expect(await SecureStorageCanary.check(_ThrowingSecretStore()), isFalse);
     });
 
-    test('false when the read-back does not match what was written',
-        () async {
+    test('false when the read-back does not match what was written', () async {
       expect(
         await SecureStorageCanary.check(_SilentlyWrongSecretStore()),
         isFalse,
       );
     });
 
-    test(
-        'false within a bounded time when the store never responds '
+    test('false within a bounded time when the store never responds '
         '(e.g. a hung platform call with no D-Bus session)', () async {
       final result = await SecureStorageCanary.check(_HangingSecretStore())
           .timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw TimeoutException(
-          'check() did not resolve on its own — it needs its own internal '
-          'timeout around the underlying store calls',
-        ),
-      );
+            const Duration(seconds: 10),
+            onTimeout: () => throw TimeoutException(
+              'check() did not resolve on its own — it needs its own internal '
+              'timeout around the underlying store calls',
+            ),
+          );
       expect(result, isFalse);
     });
 

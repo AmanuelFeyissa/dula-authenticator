@@ -21,10 +21,10 @@ abstract class OtpGenerator {
   static const OtpGenerator _steam = SteamGuardGenerator();
 
   static OtpGenerator forType(OtpType type) => switch (type) {
-        OtpType.totp => _totp,
-        OtpType.hotp => _hotp,
-        OtpType.steam => _steam,
-      };
+    OtpType.totp => _totp,
+    OtpType.hotp => _hotp,
+    OtpType.steam => _steam,
+  };
 
   /// Renders the code for [counter].
   ///

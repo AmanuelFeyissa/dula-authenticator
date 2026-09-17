@@ -4,10 +4,7 @@ import 'package:dula_auth/core/settings/app_settings.dart';
 void main() {
   group('defaults', () {
     test('locks after thirty seconds in the background', () {
-      expect(
-        AppSettings().autoLock,
-        AutoLockDelay.thirtySeconds,
-      );
+      expect(AppSettings().autoLock, AutoLockDelay.thirtySeconds);
     });
 
     test('leaves biometric unlock off until the user opts in', () {
@@ -33,8 +30,7 @@ void main() {
     });
 
     test('each option has an ascending, labelled delay', () {
-      expect(AutoLockDelay.thirtySeconds.duration,
-          const Duration(seconds: 30));
+      expect(AutoLockDelay.thirtySeconds.duration, const Duration(seconds: 30));
       expect(AutoLockDelay.oneMinute.duration, const Duration(minutes: 1));
       expect(AutoLockDelay.fiveMinutes.duration, const Duration(minutes: 5));
       for (final option in AutoLockDelay.values) {
@@ -69,8 +65,9 @@ void main() {
 
     test('a nonsensical rotation period is clamped, not honoured', () {
       expect(
-        AppSettings.fromMap(const {'credentialRotationDays': 0})
-            .credentialRotationDays,
+        AppSettings.fromMap(const {
+          'credentialRotationDays': 0,
+        }).credentialRotationDays,
         greaterThan(0),
       );
     });
@@ -85,10 +82,7 @@ void main() {
       // applied to every user, so a year-old PIN forced a rotation prompt.
       final settings = AppSettings();
 
-      expect(
-        settings.isCredentialExpired(setOn, now: muchLater),
-        isFalse,
-      );
+      expect(settings.isCredentialExpired(setOn, now: muchLater), isFalse);
     });
 
     test('expires once the period has elapsed and rotation is enabled', () {
@@ -129,13 +123,15 @@ void main() {
       );
       expect(AppSettings().credentialRotationDays, 60);
       expect(
-        AppSettings.fromMap(const {'credentialRotationDays': 1})
-            .credentialRotationDays,
+        AppSettings.fromMap(const {
+          'credentialRotationDays': 1,
+        }).credentialRotationDays,
         7,
       );
       expect(
-        AppSettings.fromMap(const {'credentialRotationDays': 9999})
-            .credentialRotationDays,
+        AppSettings.fromMap(const {
+          'credentialRotationDays': 9999,
+        }).credentialRotationDays,
         365,
       );
     });

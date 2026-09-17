@@ -46,12 +46,16 @@ void main() {
         await tester.pump(const Duration(milliseconds: 250));
       }
 
-      expect(blocked, findsNothing,
-          reason: 'the gate closed on a keyring that is up and unlocked');
+      expect(
+        blocked,
+        findsNothing,
+        reason: 'the gate closed on a keyring that is up and unlocked',
+      );
       expect(setup, findsOneWidget);
     },
-    skip: !(_expectKeyring &&
-        !kIsWeb &&
-        defaultTargetPlatform == TargetPlatform.linux),
+    skip:
+        !(_expectKeyring &&
+            !kIsWeb &&
+            defaultTargetPlatform == TargetPlatform.linux),
   );
 }

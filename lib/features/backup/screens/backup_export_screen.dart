@@ -26,8 +26,7 @@ class BackupExportScreen extends ConsumerStatefulWidget {
   const BackupExportScreen({super.key});
 
   @override
-  ConsumerState<BackupExportScreen> createState() =>
-      _BackupExportScreenState();
+  ConsumerState<BackupExportScreen> createState() => _BackupExportScreenState();
 }
 
 class _BackupExportScreenState extends ConsumerState<BackupExportScreen> {
@@ -81,9 +80,9 @@ class _BackupExportScreenState extends ConsumerState<BackupExportScreen> {
         setState(() => _busy = false);
         if (saved) {
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Backup saved.')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Backup saved.')));
         }
     }
   }

@@ -7,30 +7,34 @@ OtpAccount _account({
   String issuer = 'GitHub',
   String accountName = 'dev@example.com',
   String secret = 'JBSWY3DPEHPK3PXP',
-}) =>
-    OtpAccount(id: id, issuer: issuer, accountName: accountName, secret: secret);
+}) => OtpAccount(
+  id: id,
+  issuer: issuer,
+  accountName: accountName,
+  secret: secret,
+);
 
 void main() {
   group('new accounts', () {
     test('an incoming account with no match is a new account', () {
-      final plan = ImportMerge.plan(
-        existing: [],
-        incoming: [_account()],
-      );
+      final plan = ImportMerge.plan(existing: [], incoming: [_account()]);
 
       expect(plan.newAccounts, hasLength(1));
       expect(plan.duplicates, isEmpty);
     });
 
-    test('a different secret under the same issuer/account is new, not a duplicate', () {
-      final plan = ImportMerge.plan(
-        existing: [_account(secret: 'JBSWY3DPEHPK3PXP')],
-        incoming: [_account(secret: 'KRSXG5CTMVRXEZLU')],
-      );
+    test(
+      'a different secret under the same issuer/account is new, not a duplicate',
+      () {
+        final plan = ImportMerge.plan(
+          existing: [_account(secret: 'JBSWY3DPEHPK3PXP')],
+          incoming: [_account(secret: 'KRSXG5CTMVRXEZLU')],
+        );
 
-      expect(plan.newAccounts, hasLength(1));
-      expect(plan.duplicates, isEmpty);
-    });
+        expect(plan.newAccounts, hasLength(1));
+        expect(plan.duplicates, isEmpty);
+      },
+    );
   });
 
   group('duplicates', () {
@@ -67,7 +71,9 @@ void main() {
 
     test('matches regardless of surrounding whitespace', () {
       final plan = ImportMerge.plan(
-        existing: [_account(issuer: ' GitHub ', accountName: ' dev@example.com ')],
+        existing: [
+          _account(issuer: ' GitHub ', accountName: ' dev@example.com '),
+        ],
         incoming: [_account(issuer: 'GitHub', accountName: 'dev@example.com')],
       );
 
@@ -90,23 +96,25 @@ void main() {
       expect(plan.duplicates.map((d) => d.incoming.id), ['dup']);
     });
 
-    test('two identical incoming accounts both match the one existing account',
-        () {
-      // Neither incoming entry is compared against the other — only against
-      // what is already stored — so importing the same file twice is a
-      // deterministic no-op rather than depending on processing order.
-      final existing = [_account(issuer: 'GitHub')];
-      final plan = ImportMerge.plan(
-        existing: existing,
-        incoming: [
-          _account(id: 'a', issuer: 'GitHub'),
-          _account(id: 'b', issuer: 'GitHub'),
-        ],
-      );
+    test(
+      'two identical incoming accounts both match the one existing account',
+      () {
+        // Neither incoming entry is compared against the other — only against
+        // what is already stored — so importing the same file twice is a
+        // deterministic no-op rather than depending on processing order.
+        final existing = [_account(issuer: 'GitHub')];
+        final plan = ImportMerge.plan(
+          existing: existing,
+          incoming: [
+            _account(id: 'a', issuer: 'GitHub'),
+            _account(id: 'b', issuer: 'GitHub'),
+          ],
+        );
 
-      expect(plan.duplicates, hasLength(2));
-      expect(plan.newAccounts, isEmpty);
-    });
+        expect(plan.duplicates, hasLength(2));
+        expect(plan.newAccounts, isEmpty);
+      },
+    );
   });
 
   group('empty inputs', () {
@@ -119,7 +127,10 @@ void main() {
     test('nothing existing means everything incoming is new', () {
       final plan = ImportMerge.plan(
         existing: [],
-        incoming: [_account(id: 'a'), _account(id: 'b', issuer: 'AWS')],
+        incoming: [
+          _account(id: 'a'),
+          _account(id: 'b', issuer: 'AWS'),
+        ],
       );
       expect(plan.newAccounts, hasLength(2));
     });

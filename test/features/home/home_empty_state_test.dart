@@ -26,10 +26,12 @@ void main() {
       ProviderScope(
         overrides: [
           brandingConfigProvider.overrideWithValue(BrandingConfig.fallback),
-          authRepositoryProvider
-              .overrideWithValue(AuthRepository(store: store)),
-          accountRepositoryProvider
-              .overrideWithValue(AccountRepository(store: store)),
+          authRepositoryProvider.overrideWithValue(
+            AuthRepository(store: store),
+          ),
+          accountRepositoryProvider.overrideWithValue(
+            AccountRepository(store: store),
+          ),
         ],
         child: const MaterialApp(home: HomeScreen()),
       ),

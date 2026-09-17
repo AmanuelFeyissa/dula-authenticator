@@ -7,8 +7,7 @@ import 'package:dula_auth/core/otp/otp_type.dart';
 const rfcSecret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
 
 /// RFC 6238 Appendix B seeds for the stronger hashes (32 and 64 bytes).
-const rfcSecretSha256 =
-    'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA';
+const rfcSecretSha256 = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZA';
 const rfcSecretSha512 =
     'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'
     'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQGEZDGNA';
@@ -21,8 +20,16 @@ void main() {
     // The canonical published vectors. These are the contract: if they break,
     // every HOTP credential this app holds produces wrong codes.
     const expected = [
-      '755224', '287082', '359152', '969429', '338314',
-      '254676', '287922', '162583', '399871', '520489',
+      '755224',
+      '287082',
+      '359152',
+      '969429',
+      '338314',
+      '254676',
+      '287922',
+      '162583',
+      '399871',
+      '520489',
     ];
 
     for (var counter = 0; counter < expected.length; counter++) {
@@ -141,8 +148,11 @@ void main() {
         algorithm: OtpAlgorithm.sha256,
       );
 
-      expect(sha1, isNot(sha256),
-          reason: 'the algorithm parameter must actually be applied');
+      expect(
+        sha1,
+        isNot(sha256),
+        reason: 'the algorithm parameter must actually be applied',
+      );
     });
   });
 
@@ -184,8 +194,11 @@ void main() {
 
         expect(code.length, 5, reason: 'counter $counter');
         for (final ch in code.split('')) {
-          expect(alphabet.contains(ch), isTrue,
-              reason: '"$ch" is not in the Steam alphabet (counter $counter)');
+          expect(
+            alphabet.contains(ch),
+            isTrue,
+            reason: '"$ch" is not in the Steam alphabet (counter $counter)',
+          );
         }
       }
     });

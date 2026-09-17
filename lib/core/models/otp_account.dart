@@ -71,10 +71,7 @@ class OtpAccount {
     final generator = OtpGenerator.forType(type);
     final effectiveCounter = type == OtpType.hotp
         ? counter
-        : generator.counterFor(
-            time: time ?? DateTime.now(),
-            period: period,
-          );
+        : generator.counterFor(time: time ?? DateTime.now(), period: period);
 
     return generator.generate(
       secret: secret,
@@ -87,8 +84,9 @@ class OtpAccount {
   /// Seconds until a time-based code refreshes. Zero for HOTP.
   int secondsRemaining({DateTime? time}) {
     if (!type.isTimeBased) return 0;
-    return OtpGenerator.forType(type)
-        .secondsRemaining(time: time ?? DateTime.now(), period: period);
+    return OtpGenerator.forType(
+      type,
+    ).secondsRemaining(time: time ?? DateTime.now(), period: period);
   }
 
   OtpAccount copyWith({
@@ -123,37 +121,37 @@ class OtpAccount {
   }
 
   Map<String, dynamic> toMap() => {
-        'id': id,
-        'issuer': issuer,
-        'accountName': accountName,
-        'secret': secret,
-        'type': type.name,
-        'digits': digits,
-        'period': period,
-        'algorithm': algorithm.name,
-        'counter': counter,
-        'tags': tags,
-        'isFavorite': isFavorite,
-        // loadError is intentionally omitted: see its doc comment.
-      };
+    'id': id,
+    'issuer': issuer,
+    'accountName': accountName,
+    'secret': secret,
+    'type': type.name,
+    'digits': digits,
+    'period': period,
+    'algorithm': algorithm.name,
+    'counter': counter,
+    'tags': tags,
+    'isFavorite': isFavorite,
+    // loadError is intentionally omitted: see its doc comment.
+  };
 
   factory OtpAccount.fromMap(Map<String, dynamic> map) => OtpAccount(
-        id: map['id'] as String? ?? '',
-        issuer: map['issuer'] as String? ?? '',
-        accountName: map['accountName'] as String? ?? '',
-        secret: map['secret'] as String? ?? '',
-        type: OtpType.fromName(map['type'] as String?),
-        digits: (map['digits'] as num?)?.toInt() ?? 6,
-        period: (map['period'] as num?)?.toInt() ?? 30,
-        algorithm: OtpAlgorithm.fromName(map['algorithm'] as String?),
-        counter: (map['counter'] as num?)?.toInt() ?? 0,
-        tags: map['tags'] is List
-            ? (map['tags'] as List).whereType<String>().toList()
-            : const [],
-        isFavorite: map['isFavorite'] as bool? ?? false,
-        // loadError is never read back: a stored value would be stale from a
-        // previous session and could not possibly still be accurate.
-      );
+    id: map['id'] as String? ?? '',
+    issuer: map['issuer'] as String? ?? '',
+    accountName: map['accountName'] as String? ?? '',
+    secret: map['secret'] as String? ?? '',
+    type: OtpType.fromName(map['type'] as String?),
+    digits: (map['digits'] as num?)?.toInt() ?? 6,
+    period: (map['period'] as num?)?.toInt() ?? 30,
+    algorithm: OtpAlgorithm.fromName(map['algorithm'] as String?),
+    counter: (map['counter'] as num?)?.toInt() ?? 0,
+    tags: map['tags'] is List
+        ? (map['tags'] as List).whereType<String>().toList()
+        : const [],
+    isFavorite: map['isFavorite'] as bool? ?? false,
+    // loadError is never read back: a stored value would be stale from a
+    // previous session and could not possibly still be accurate.
+  );
 
   String toJson() => json.encode(toMap());
 

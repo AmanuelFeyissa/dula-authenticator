@@ -9,14 +9,10 @@ import 'package:dula_auth/core/otp/otp_type.dart';
 /// Fixtures shaped from the published Aegis vault format:
 /// https://github.com/beemdevelopment/Aegis/blob/master/docs/vault.md
 String _plaintextVault(List<Map<String, dynamic>> entries) => jsonEncode({
-      'version': 1,
-      'header': {'slots': null, 'params': null},
-      'db': {
-        'version': 3,
-        'entries': entries,
-        'groups': [],
-      },
-    });
+  'version': 1,
+  'header': {'slots': null, 'params': null},
+  'db': {'version': 3, 'entries': entries, 'groups': []},
+});
 
 Map<String, dynamic> _entry({
   String type = 'totp',
@@ -28,24 +24,23 @@ Map<String, dynamic> _entry({
   int digits = 6,
   int? period,
   int? counter,
-}) =>
-    {
-      'type': type,
-      'uuid': uuid,
-      'name': name,
-      'issuer': issuer,
-      'note': '',
-      'icon': null,
-      'favorite': false,
-      'info': {
-        'secret': secret,
-        'algo': algo,
-        'digits': digits,
-        'period': ?period,
-        'counter': ?counter,
-      },
-      'groups': [],
-    };
+}) => {
+  'type': type,
+  'uuid': uuid,
+  'name': name,
+  'issuer': issuer,
+  'note': '',
+  'icon': null,
+  'favorite': false,
+  'info': {
+    'secret': secret,
+    'algo': algo,
+    'digits': digits,
+    'period': ?period,
+    'counter': ?counter,
+  },
+  'groups': [],
+};
 
 void main() {
   var counter = 0;
@@ -75,8 +70,8 @@ void main() {
         _entry(type: 'hotp', counter: 7, period: null),
       ]);
 
-      final result = AegisImport.parse(vault, newId: nextId)
-          as ThirdPartyImportSuccess;
+      final result =
+          AegisImport.parse(vault, newId: nextId) as ThirdPartyImportSuccess;
 
       expect(result.accounts.single.type, OtpType.hotp);
       expect(result.accounts.single.counter, 7);
@@ -85,8 +80,8 @@ void main() {
     test('decodes a Steam entry', () {
       final vault = _plaintextVault([_entry(type: 'steam', digits: 5)]);
 
-      final result = AegisImport.parse(vault, newId: nextId)
-          as ThirdPartyImportSuccess;
+      final result =
+          AegisImport.parse(vault, newId: nextId) as ThirdPartyImportSuccess;
 
       expect(result.accounts.single.type, OtpType.steam);
     });
@@ -99,10 +94,13 @@ void main() {
       };
       for (final entry in cases.entries) {
         final vault = _plaintextVault([_entry(algo: entry.key)]);
-        final result = AegisImport.parse(vault, newId: nextId)
-            as ThirdPartyImportSuccess;
-        expect(result.accounts.single.algorithm, entry.value,
-            reason: entry.key);
+        final result =
+            AegisImport.parse(vault, newId: nextId) as ThirdPartyImportSuccess;
+        expect(
+          result.accounts.single.algorithm,
+          entry.value,
+          reason: entry.key,
+        );
       }
     });
 
@@ -113,8 +111,8 @@ void main() {
         _entry(issuer: 'Three'),
       ]);
 
-      final result = AegisImport.parse(vault, newId: nextId)
-          as ThirdPartyImportSuccess;
+      final result =
+          AegisImport.parse(vault, newId: nextId) as ThirdPartyImportSuccess;
 
       expect(result.accounts.map((a) => a.issuer), ['One', 'Two', 'Three']);
     });
@@ -161,17 +159,21 @@ void main() {
     });
 
     test('rejects JSON with no db field', () {
-      final result =
-          AegisImport.parse(jsonEncode({'version': 1}), newId: nextId);
+      final result = AegisImport.parse(
+        jsonEncode({'version': 1}),
+        newId: nextId,
+      );
       expect(result, isA<ThirdPartyImportUnrecognized>());
     });
 
-    test('rejects an entry with no secret rather than importing an empty one',
-        () {
-      final vault = _plaintextVault([_entry(secret: '')]);
-      final result = AegisImport.parse(vault, newId: nextId);
-      expect(result, isA<ThirdPartyImportUnrecognized>());
-    });
+    test(
+      'rejects an entry with no secret rather than importing an empty one',
+      () {
+        final vault = _plaintextVault([_entry(secret: '')]);
+        final result = AegisImport.parse(vault, newId: nextId);
+        expect(result, isA<ThirdPartyImportUnrecognized>());
+      },
+    );
 
     test('rejects an unrecognised type rather than guessing', () {
       final vault = _plaintextVault([_entry(type: 'mystery-type')]);

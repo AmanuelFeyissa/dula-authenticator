@@ -30,16 +30,18 @@ void main() {
       expect(account.algorithm, OtpAlgorithm.sha1);
     });
 
-    test('reads the issuer from the label prefix when no query param exists',
-        () {
-      final account = OtpUri.parse(
-        'otpauth://totp/ACME%20Co:alice@example.com?secret=JBSWY3DPEHPK3PXP',
-        id: 'x',
-      )!;
+    test(
+      'reads the issuer from the label prefix when no query param exists',
+      () {
+        final account = OtpUri.parse(
+          'otpauth://totp/ACME%20Co:alice@example.com?secret=JBSWY3DPEHPK3PXP',
+          id: 'x',
+        )!;
 
-      expect(account.issuer, 'ACME Co');
-      expect(account.accountName, 'alice@example.com');
-    });
+        expect(account.issuer, 'ACME Co');
+        expect(account.accountName, 'alice@example.com');
+      },
+    );
 
     test('decodes percent-encoded labels', () {
       final account = OtpUri.parse(
@@ -169,10 +171,7 @@ void main() {
     });
 
     test('returns null when the secret is missing', () {
-      expect(
-        OtpUri.parse('otpauth://totp/Example:alice', id: 'x'),
-        isNull,
-      );
+      expect(OtpUri.parse('otpauth://totp/Example:alice', id: 'x'), isNull);
       expect(
         OtpUri.parse('otpauth://totp/Example:alice?secret=', id: 'x'),
         isNull,
@@ -190,8 +189,10 @@ void main() {
 
     test('returns null for an unknown otp type', () {
       expect(
-        OtpUri.parse('otpauth://motp/Example:alice?secret=JBSWY3DPEHPK3PXP',
-            id: 'x'),
+        OtpUri.parse(
+          'otpauth://motp/Example:alice?secret=JBSWY3DPEHPK3PXP',
+          id: 'x',
+        ),
         isNull,
       );
     });

@@ -170,8 +170,8 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen>
       _errorText = state.isLockedOut
           ? ''
           : (state.credentialKind == CredentialKind.pin
-              ? 'Incorrect PIN'
-              : 'Incorrect passphrase');
+                ? 'Incorrect PIN'
+                : 'Incorrect passphrase');
     });
   }
 
@@ -207,8 +207,9 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen>
                 return SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: ConstrainedBox(
-                    constraints:
-                        BoxConstraints(minHeight: constraints.maxHeight),
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -217,8 +218,9 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen>
                         const SizedBox(height: 12),
                         Text(
                           branding.appName,
-                          style: theme.textTheme.displaySmall
-                              ?.copyWith(color: Colors.white),
+                          style: theme.textTheme.displaySmall?.copyWith(
+                            color: Colors.white,
+                          ),
                         ),
                         const SizedBox(height: 32),
                         Text(
@@ -360,8 +362,11 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.lock_clock_outlined,
-              color: Colors.redAccent, size: 16),
+          const Icon(
+            Icons.lock_clock_outlined,
+            color: Colors.redAccent,
+            size: 16,
+          ),
           const SizedBox(width: 8),
           Flexible(
             child: Text(

@@ -177,8 +177,9 @@ class _CredentialSetupScreenState extends ConsumerState<CredentialSetupScreen> {
                 return SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: ConstrainedBox(
-                    constraints:
-                        BoxConstraints(minHeight: constraints.maxHeight),
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -187,8 +188,9 @@ class _CredentialSetupScreenState extends ConsumerState<CredentialSetupScreen> {
                         const SizedBox(height: 12),
                         Text(
                           branding.appName,
-                          style: theme.textTheme.displaySmall
-                              ?.copyWith(color: Colors.white),
+                          style: theme.textTheme.displaySmall?.copyWith(
+                            color: Colors.white,
+                          ),
                         ),
                         const SizedBox(height: 28),
                         _buildStep(compact),
@@ -225,10 +227,9 @@ class _CredentialSetupScreenState extends ConsumerState<CredentialSetupScreen> {
         Text(
           'How would you like to unlock?',
           textAlign: TextAlign.center,
-          style: Theme.of(context)
-              .textTheme
-              .titleLarge
-              ?.copyWith(color: Colors.white),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(color: Colors.white),
         ),
         const SizedBox(height: 8),
         const Text(
@@ -264,12 +265,12 @@ class _CredentialSetupScreenState extends ConsumerState<CredentialSetupScreen> {
             confirming
                 ? 'Confirm PIN'
                 : (_isRotation
-                    ? 'Create New PIN'
-                    : 'Create ${PinPolicy.pinLength}-Digit PIN'),
+                      ? 'Create New PIN'
+                      : 'Create ${PinPolicy.pinLength}-Digit PIN'),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.white70,
-                  letterSpacing: 1.2,
-                ),
+              color: Colors.white70,
+              letterSpacing: 1.2,
+            ),
           ),
           const SizedBox(height: 24),
           PinDots(length: PinPolicy.pinLength, filled: _pin.length),
@@ -293,9 +294,9 @@ class _CredentialSetupScreenState extends ConsumerState<CredentialSetupScreen> {
               ? 'Confirm Passphrase'
               : (_isRotation ? 'Create New Passphrase' : 'Create Passphrase'),
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.white70,
-                letterSpacing: 1.2,
-              ),
+            color: Colors.white70,
+            letterSpacing: 1.2,
+          ),
         ),
         const SizedBox(height: 24),
         PassphraseField(
@@ -328,10 +329,9 @@ class _CredentialSetupScreenState extends ConsumerState<CredentialSetupScreen> {
         const SizedBox(height: 16),
         Text(
           'Unlock with biometrics?',
-          style: Theme.of(context)
-              .textTheme
-              .titleLarge
-              ?.copyWith(color: Colors.white),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(color: Colors.white),
         ),
         const SizedBox(height: 12),
         Text(
@@ -379,12 +379,12 @@ class _CredentialSetupScreenState extends ConsumerState<CredentialSetupScreen> {
       onPressed: _busy
           ? null
           : () => setState(() {
-                _step = _Step.choose;
-                _pin = '';
-                _firstEntry = null;
-                _error = '';
-                _passphrase.clear();
-              }),
+              _step = _Step.choose;
+              _pin = '';
+              _firstEntry = null;
+              _error = '';
+              _passphrase.clear();
+            }),
       child: const Text(
         'Choose a different method',
         style: TextStyle(color: Colors.white54, fontSize: 12),
@@ -424,14 +424,16 @@ class _ChoiceCard extends StatelessWidget {
                   children: [
                     Text(
                       kind.label,
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(color: Colors.white),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       kind.explanation,
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: Colors.white60),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.white60,
+                      ),
                     ),
                   ],
                 ),

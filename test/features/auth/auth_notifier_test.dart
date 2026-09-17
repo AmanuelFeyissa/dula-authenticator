@@ -118,8 +118,11 @@ void main() {
       final error = await auth.setupCredential('123456', CredentialKind.pin);
 
       expect(error, isNotNull);
-      expect(await vault.isInitialized(), isFalse,
-          reason: 'a refused credential must not leave a vault behind');
+      expect(
+        await vault.isInitialized(),
+        isFalse,
+        reason: 'a refused credential must not leave a vault behind',
+      );
       expect(auth.state.isSetupRequired, isTrue);
     });
 
@@ -194,8 +197,11 @@ void main() {
         await relaunched.unlockWithCredential(otherPin);
       }
 
-      expect(await relaunched.unlockWithCredential(strongPin), isFalse,
-          reason: 'the lockout is the point; guessing must cost time');
+      expect(
+        await relaunched.unlockWithCredential(strongPin),
+        isFalse,
+        reason: 'the lockout is the point; guessing must cost time',
+      );
     });
 
     test('a successful unlock clears the failure count', () async {
@@ -254,8 +260,11 @@ void main() {
 
       await auth.setBiometricUnlockEnabled(false);
 
-      expect(await repository.getStoredMasterKey(), isNull,
-          reason: 'turning biometrics off must not leave the key behind');
+      expect(
+        await repository.getStoredMasterKey(),
+        isNull,
+        reason: 'turning biometrics off must not leave the key behind',
+      );
     });
 
     test('cannot be enabled on a device without biometrics', () async {
@@ -342,35 +351,37 @@ void main() {
   });
 
   group('changing the credential', () {
-    test('switches from a PIN to a passphrase without losing accounts',
-        () async {
-      final auth = await notifierFrom(buildContainer());
-      await auth.setupCredential(strongPin, CredentialKind.pin);
+    test(
+      'switches from a PIN to a passphrase without losing accounts',
+      () async {
+        final auth = await notifierFrom(buildContainer());
+        await auth.setupCredential(strongPin, CredentialKind.pin);
 
-      final accounts = AccountRepository(store: store, vault: vault);
-      await accounts.addAccount(
-        OtpAccount(
-          id: '1',
-          issuer: 'GitHub',
-          accountName: 'dev@example.com',
-          secret: 'JBSWY3DPEHPK3PXP',
-        ),
-        masterKey: auth.state.masterKey,
-      );
+        final accounts = AccountRepository(store: store, vault: vault);
+        await accounts.addAccount(
+          OtpAccount(
+            id: '1',
+            issuer: 'GitHub',
+            accountName: 'dev@example.com',
+            secret: 'JBSWY3DPEHPK3PXP',
+          ),
+          masterKey: auth.state.masterKey,
+        );
 
-      final error = await auth.changeCredential(
-        current: strongPin,
-        next: strongPassphrase,
-        kind: CredentialKind.passphrase,
-      );
+        final error = await auth.changeCredential(
+          current: strongPin,
+          next: strongPassphrase,
+          kind: CredentialKind.passphrase,
+        );
 
-      expect(error, isNull);
-      expect(await vault.credentialKind(), CredentialKind.passphrase);
+        expect(error, isNull);
+        expect(await vault.credentialKind(), CredentialKind.passphrase);
 
-      final key = (await vault.unlock(strongPassphrase)).key!;
-      final loaded = await accounts.getAccounts(masterKey: key);
-      expect(loaded.single.secret, 'JBSWY3DPEHPK3PXP');
-    });
+        final key = (await vault.unlock(strongPassphrase)).key!;
+        final loaded = await accounts.getAccounts(masterKey: key);
+        expect(loaded.single.secret, 'JBSWY3DPEHPK3PXP');
+      },
+    );
 
     test('refuses a new credential that fails policy', () async {
       final auth = await notifierFrom(buildContainer());
@@ -383,8 +394,11 @@ void main() {
       );
 
       expect(error, isNotNull);
-      expect((await vault.unlock(strongPin)).isUnlocked, isTrue,
-          reason: 'the original credential must keep working');
+      expect(
+        (await vault.unlock(strongPin)).isUnlocked,
+        isTrue,
+        reason: 'the original credential must keep working',
+      );
     });
 
     test('refuses when the current credential is wrong', () async {
@@ -401,8 +415,7 @@ void main() {
       expect(await vault.credentialKind(), CredentialKind.pin);
     });
 
-    test('re-caches the key for biometrics under the new credential',
-        () async {
+    test('re-caches the key for biometrics under the new credential', () async {
       final auth = await notifierFrom(buildContainer());
       await auth.setupCredential(strongPin, CredentialKind.pin);
       await auth.setBiometricUnlockEnabled(true);
@@ -445,8 +458,11 @@ void main() {
       final auth = await notifierFrom(buildContainer());
 
       expect(auth.state.isStorageUnavailable, isTrue);
-      expect(auth.state.isSetupRequired, isFalse,
-          reason: 'an unreadable vault must never look like no vault');
+      expect(
+        auth.state.isSetupRequired,
+        isFalse,
+        reason: 'an unreadable vault must never look like no vault',
+      );
       expect(auth.state.isLocked, isTrue);
     });
 

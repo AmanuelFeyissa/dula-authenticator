@@ -72,11 +72,19 @@ class OtpUri {
 
     final digits = type == OtpType.steam
         ? 5
-        : _clampInt(params['digits'],
-            fallback: 6, min: minDigits, max: maxDigits);
+        : _clampInt(
+            params['digits'],
+            fallback: 6,
+            min: minDigits,
+            max: maxDigits,
+          );
     final period = _clampInt(params['period'], fallback: 30, min: 1, max: 300);
-    final counter =
-        _clampInt(params['counter'], fallback: 0, min: 0, max: 1 << 40);
+    final counter = _clampInt(
+      params['counter'],
+      fallback: 0,
+      min: 0,
+      max: 1 << 40,
+    );
 
     return OtpAccount(
       id: id,
@@ -95,7 +103,7 @@ class OtpUri {
   static String toUri(OtpAccount account) {
     final label = account.issuer.isNotEmpty
         ? '${Uri.encodeComponent(account.issuer)}:'
-            '${Uri.encodeComponent(account.accountName)}'
+              '${Uri.encodeComponent(account.accountName)}'
         : Uri.encodeComponent(account.accountName);
 
     final params = <String, String>{

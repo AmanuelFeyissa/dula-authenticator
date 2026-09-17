@@ -15,14 +15,22 @@ void main() {
         TargetPlatform.macOS,
       ]) {
         debugDefaultTargetPlatformOverride = platform;
-        expect(EnrollmentCapabilities.cameraScanning, isTrue, reason: '$platform');
+        expect(
+          EnrollmentCapabilities.cameraScanning,
+          isTrue,
+          reason: '$platform',
+        );
       }
     });
 
     test('false on Windows and Linux', () {
       for (final platform in [TargetPlatform.windows, TargetPlatform.linux]) {
         debugDefaultTargetPlatformOverride = platform;
-        expect(EnrollmentCapabilities.cameraScanning, isFalse, reason: '$platform');
+        expect(
+          EnrollmentCapabilities.cameraScanning,
+          isFalse,
+          reason: '$platform',
+        );
       }
     });
   });
@@ -37,8 +45,11 @@ void main() {
         TargetPlatform.iOS,
       ]) {
         debugDefaultTargetPlatformOverride = platform;
-        expect(EnrollmentCapabilities.clipboardImagePaste, isTrue,
-            reason: '$platform');
+        expect(
+          EnrollmentCapabilities.clipboardImagePaste,
+          isTrue,
+          reason: '$platform',
+        );
       }
     });
   });
@@ -51,16 +62,22 @@ void main() {
         TargetPlatform.linux,
       ]) {
         debugDefaultTargetPlatformOverride = platform;
-        expect(EnrollmentCapabilities.dragAndDropImport, isTrue,
-            reason: '$platform');
+        expect(
+          EnrollmentCapabilities.dragAndDropImport,
+          isTrue,
+          reason: '$platform',
+        );
       }
     });
 
     test('false on Android and iOS', () {
       for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
         debugDefaultTargetPlatformOverride = platform;
-        expect(EnrollmentCapabilities.dragAndDropImport, isFalse,
-            reason: '$platform');
+        expect(
+          EnrollmentCapabilities.dragAndDropImport,
+          isFalse,
+          reason: '$platform',
+        );
       }
     });
   });

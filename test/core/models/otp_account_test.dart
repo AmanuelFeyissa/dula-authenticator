@@ -1,10 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dula_auth/core/models/otp_account.dart';
 
-OtpAccount _account({
-  List<String> tags = const [],
-  bool isFavorite = false,
-}) =>
+OtpAccount _account({List<String> tags = const [], bool isFavorite = false}) =>
     OtpAccount(
       id: '1',
       issuer: 'GitHub',
@@ -97,7 +94,9 @@ void main() {
       // loadError is a runtime-only annotation set by AccountRepository after
       // a failed decrypt; persisting it would be nonsensical (it describes a
       // failure that happened in this session, not a fact about the account).
-      final account = _account().copyWith(loadError: 'GCM authentication failed');
+      final account = _account().copyWith(
+        loadError: 'GCM authentication failed',
+      );
 
       expect(account.toMap().containsKey('loadError'), isFalse);
     });

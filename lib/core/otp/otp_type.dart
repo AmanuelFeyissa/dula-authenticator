@@ -15,23 +15,23 @@ enum OtpType {
 
   /// The `type` component of an `otpauth://` URI.
   String get uriValue => switch (this) {
-        OtpType.totp => 'totp',
-        OtpType.hotp => 'hotp',
-        OtpType.steam => 'totp',
-      };
+    OtpType.totp => 'totp',
+    OtpType.hotp => 'hotp',
+    OtpType.steam => 'totp',
+  };
 
   String get label => switch (this) {
-        OtpType.totp => 'Time-based (TOTP)',
-        OtpType.hotp => 'Counter-based (HOTP)',
-        OtpType.steam => 'Steam Guard',
-      };
+    OtpType.totp => 'Time-based (TOTP)',
+    OtpType.hotp => 'Counter-based (HOTP)',
+    OtpType.steam => 'Steam Guard',
+  };
 
   /// Whether codes refresh on a timer rather than on demand.
   bool get isTimeBased => this != OtpType.hotp;
 
   static OtpType fromName(String? name) => switch (name?.toLowerCase()) {
-        'hotp' => OtpType.hotp,
-        'steam' => OtpType.steam,
-        _ => OtpType.totp,
-      };
+    'hotp' => OtpType.hotp,
+    'steam' => OtpType.steam,
+    _ => OtpType.totp,
+  };
 }

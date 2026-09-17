@@ -31,23 +31,27 @@ class _RecordingSecretStore implements SecretStore {
 
 void main() {
   group('GatedSecretStore', () {
-    test('passes read, write and delete through when the gate is open',
-        () async {
-      final inner = _RecordingSecretStore();
-      final store = GatedSecretStore(inner, SecretStoreGate(() async => true));
+    test(
+      'passes read, write and delete through when the gate is open',
+      () async {
+        final inner = _RecordingSecretStore();
+        final store = GatedSecretStore(
+          inner,
+          SecretStoreGate(() async => true),
+        );
 
-      await store.write('k', 'v');
-      expect(await store.read('k'), 'v');
-      await store.delete('k');
+        await store.write('k', 'v');
+        expect(await store.read('k'), 'v');
+        await store.delete('k');
 
-      expect(inner.calls, ['write k', 'read k', 'delete k']);
-    });
+        expect(inner.calls, ['write k', 'read k', 'delete k']);
+      },
+    );
 
     test('throws SecretStoreUnavailableException without touching the inner '
         'store when the gate is closed', () async {
       final inner = _RecordingSecretStore();
-      final store =
-          GatedSecretStore(inner, SecretStoreGate(() async => false));
+      final store = GatedSecretStore(inner, SecretStoreGate(() async => false));
 
       await expectLater(
         store.read('k'),
@@ -131,8 +135,10 @@ void main() {
     });
 
     test('alwaysOpen never blocks and never runs a subprocess', () async {
-      final store =
-          GatedSecretStore(_RecordingSecretStore(), SecretStoreGate.alwaysOpen);
+      final store = GatedSecretStore(
+        _RecordingSecretStore(),
+        SecretStoreGate.alwaysOpen,
+      );
       await store.write('k', 'v');
       expect(await store.read('k'), 'v');
     });

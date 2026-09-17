@@ -89,8 +89,10 @@ class _BackupImportScreenState extends ConsumerState<BackupImportScreen> {
     setState(() => _busy = false);
 
     if (accounts == null) {
-      setState(() => _error =
-          'That does not look like an otpauth:// or otpauth-migration:// code.');
+      setState(
+        () => _error =
+            'That does not look like an otpauth:// or otpauth-migration:// code.',
+      );
       return;
     }
     _openReview(accounts, sourceLabel);
@@ -124,9 +126,11 @@ class _BackupImportScreenState extends ConsumerState<BackupImportScreen> {
           '2FAS export',
         );
       case BackupSourceKind.unrecognized:
-        setState(() => _error =
-            'This file is not a backup this app recognises (own export, '
-            'Aegis, or 2FAS).');
+        setState(
+          () => _error =
+              'This file is not a backup this app recognises (own export, '
+              'Aegis, or 2FAS).',
+        );
     }
   }
 
@@ -135,12 +139,15 @@ class _BackupImportScreenState extends ConsumerState<BackupImportScreen> {
       case ThirdPartyImportSuccess(:final accounts):
         _openReview(accounts, sourceLabel);
       case ThirdPartyImportRequiresPassword():
-        setState(() => _error =
-            '$sourceLabel is password-protected. This app cannot decrypt '
-            'it — re-export without a password and try again.');
+        setState(
+          () => _error =
+              '$sourceLabel is password-protected. This app cannot decrypt '
+              'it — re-export without a password and try again.',
+        );
       case ThirdPartyImportUnrecognized():
-        setState(() =>
-            _error = 'This does not look like a valid $sourceLabel.');
+        setState(
+          () => _error = 'This does not look like a valid $sourceLabel.',
+        );
     }
   }
 
@@ -176,8 +183,10 @@ class _BackupImportScreenState extends ConsumerState<BackupImportScreen> {
     if (confirmed != true || !mounted) return;
 
     setState(() => _busy = true);
-    final result =
-        await BackupService.import(content, _passphraseController.text);
+    final result = await BackupService.import(
+      content,
+      _passphraseController.text,
+    );
     if (!mounted) return;
     setState(() => _busy = false);
 
@@ -187,8 +196,10 @@ class _BackupImportScreenState extends ConsumerState<BackupImportScreen> {
       case BackupImportWrongPassphrase():
         setState(() => _error = 'That passphrase did not open the backup.');
       case BackupImportMalformed():
-        setState(() =>
-            _error = 'This file could not be read as a backup from this app.');
+        setState(
+          () =>
+              _error = 'This file could not be read as a backup from this app.',
+        );
     }
   }
 

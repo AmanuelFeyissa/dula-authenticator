@@ -78,8 +78,7 @@ class TwoFasImport {
     };
     if (type == null) return null;
 
-    final secret =
-        (service['secret'] as String?)?.trim().toUpperCase() ?? '';
+    final secret = (service['secret'] as String?)?.trim().toUpperCase() ?? '';
     if (secret.isEmpty) return null;
     try {
       OtpGenerator.decodeSecret(secret);
@@ -98,8 +97,7 @@ class TwoFasImport {
       accountName: account.isNotEmpty ? account : name,
       secret: secret,
       type: type,
-      digits:
-          type == OtpType.steam ? 5 : (otp['digits'] as num?)?.toInt() ?? 6,
+      digits: type == OtpType.steam ? 5 : (otp['digits'] as num?)?.toInt() ?? 6,
       period: (otp['period'] as num?)?.toInt() ?? 30,
       algorithm: OtpAlgorithm.fromName(otp['algorithm'] as String?),
       counter: (otp['counter'] as num?)?.toInt() ?? 0,
