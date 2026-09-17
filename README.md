@@ -8,15 +8,28 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3.41-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20Web%20%7C%20Linux-informational)](#platform-status)
-[![Tests](https://img.shields.io/badge/tests-337%20unit%20%2B%2033%20e2e-success)](#testing)
+[![Tests](https://img.shields.io/badge/tests-348%20unit%20%2B%2033%20e2e-success)](#testing)
 [![Telemetry](https://img.shields.io/badge/telemetry-none-critical)](docs/adr/0007-air-gapped-operability.md)
 [![ADRs](https://img.shields.io/badge/ADRs-18-8A2BE2)](docs/adr/)
+[![Release](https://img.shields.io/github/v/release/AmanuelFeyissa/dula-authenticator?sort=semver)](https://github.com/AmanuelFeyissa/dula-authenticator/releases/latest)
 
 <img src="docs/screenshots/05-home-codes.png" alt="Dula Authenticator on Windows — live TOTP codes with countdown rings, tags, and a favourite" width="720">
 
 <sub>Windows desktop build. All accounts shown use throwaway demo secrets.</sub>
 
 </div>
+
+---
+
+## Download
+
+Grab the [latest release](https://github.com/AmanuelFeyissa/dula-authenticator/releases/latest).
+Windows ships as a zip, Android as an APK, and Linux as an AppImage (one file, no install step),
+a `.deb`, or an `.rpm`.
+
+Every release includes SHA-256 checksums, a **Sigstore signature** proving the artifacts came from
+this repository's workflow, and a **CycloneDX SBOM** listing every dependency with its hash — all
+verifiable offline. See [RELEASING.md](docs/RELEASING.md).
 
 ---
 
@@ -234,7 +247,7 @@ Captured from the Windows release build. Every secret shown is a throwaway demo 
 
 | Suite | Count | Runs on |
 |---|:---:|---|
-| Unit / widget | **337** | Windows, Linux |
+| Unit / widget | **348** | Windows, Linux |
 | End-to-end (`integration_test`) | **31** + 2 Linux-only keyring proofs | Windows, Linux |
 
 The end-to-end suite drives the real app: creating a vault, unlocking at production Argon2id cost,
@@ -335,6 +348,7 @@ fix that works asks D-Bus whether the service exists *before* ever calling into 
 attempts stay in the record, with the reason each could not have worked.
 
 Further reading: [SECURITY_MODEL.md](docs/SECURITY_MODEL.md) ·
+[RELEASING.md](docs/RELEASING.md) · [CHANGELOG.md](CHANGELOG.md) ·
 [CONFIGURATION.md](docs/CONFIGURATION.md) · [BRANDING.md](docs/BRANDING.md) ·
 [CLAUDE.md](CLAUDE.md)
 

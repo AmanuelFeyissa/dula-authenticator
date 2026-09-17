@@ -32,9 +32,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
@@ -69,12 +69,12 @@ jobs:
           - target: apk
             os: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # The Android Gradle build is pinned to Java 17 in
       # android/app/build.gradle.kts; the runner's default JDK is not.
       - if: matrix.target == 'apk'
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: '17'
@@ -85,7 +85,7 @@ jobs:
           sudo apt-get install -y ninja-build libgtk-3-dev libsecret-1-dev \
             clang cmake pkg-config
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
@@ -99,7 +99,7 @@ jobs:
       # (ADR-0007, signed releases).
       - run: flutter build ${{ matrix.target }} --release
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dula-authenticator-${{ matrix.target }}
           path: ${{ matrix.target == 'windows' && 'build/windows/x64/runner/Release'
@@ -112,7 +112,7 @@ jobs:
     name: Package Linux (AppImage, deb, rpm)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - run: |
           sudo apt-get update
@@ -128,7 +128,7 @@ jobs:
             https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-x86_64.AppImage
           sudo install -m755 /tmp/appimagetool /usr/local/bin/appimagetool
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
@@ -191,7 +191,7 @@ jobs:
             -v "$PWD/packaging/linux:/pkg:ro" \
             fedora:41 bash /pkg/verify-rpm-fedora.sh
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dula-authenticator-linux-packages
           path: dist/*
@@ -201,14 +201,14 @@ jobs:
     name: Linux keyring gate (ADR-0018)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build libgtk-3-dev libsecret-1-dev \
             clang cmake pkg-config xvfb dbus-x11 gnome-keyring
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
@@ -255,14 +255,14 @@ jobs:
     # Production Argon2id cost, so it is slow by design (ADR-0010).
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build libgtk-3-dev libsecret-1-dev \
             clang cmake pkg-config xvfb dbus-x11 gnome-keyring
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable

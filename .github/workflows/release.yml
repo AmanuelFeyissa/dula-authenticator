@@ -1,0 +1,266 @@
+name: Release
+
+# Tag-driven: pushing v1.2.3 builds every shipping target, records what went
+# into it, signs the lot, and publishes a GitHub Release.
+#
+#   git tag -a v1.0.0 -m "…" && git push origin v1.0.0
+#
+# workflow_dispatch builds the same artifacts without publishing, so the
+# pipeline can be exercised without burning a version number.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: 3.41.6
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Refuse to publish a tag that disagrees with pubspec.yaml. Getting this
+  # wrong ships artifacts whose filenames contradict the release they are
+  # attached to, which is worse than a failed build.
+  # ---------------------------------------------------------------------------
+  check-version:
+    name: Check the tag matches pubspec.yaml
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - id: v
+        run: |
+          set -euo pipefail
+          pubspec="$(sed -n 's/^version: *\([0-9][^+]*\).*/\1/p' pubspec.yaml)"
+          echo "pubspec version: ${pubspec}"
+          echo "version=${pubspec}" >> "$GITHUB_OUTPUT"
+
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            tag="${GITHUB_REF_NAME#v}"
+            if [ "${tag}" != "${pubspec}" ]; then
+              echo "::error::tag v${tag} does not match pubspec.yaml ${pubspec}"
+              exit 1
+            fi
+            echo "tag and pubspec agree on ${pubspec}"
+          fi
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: check-version
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows
+            os: windows-latest
+          - target: web
+            os: ubuntu-latest
+          - target: apk
+            os: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - if: matrix.target == 'apk'
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - run: flutter build ${{ matrix.target }} --release
+
+      # One archive per platform, named for the release, so a download is
+      # self-describing once it leaves the browser.
+      - name: Collect the artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          v="${{ needs.check-version.outputs.version }}"
+          mkdir -p dist
+          case "${{ matrix.target }}" in
+            windows)
+              cd build/windows/x64/runner/Release
+              7z a -tzip "../../../../../dist/dula-authenticator-${v}-windows-x64.zip" .
+              ;;
+            web)
+              tar -czf "dist/dula-authenticator-${v}-web.tar.gz" -C build/web .
+              ;;
+            apk)
+              cp build/app/outputs/flutter-apk/app-release.apk \
+                 "dist/dula-authenticator-${v}-android.apk"
+              ;;
+          esac
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  build-linux:
+    name: Build and package Linux
+    needs: check-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgtk-3-dev libsecret-1-dev \
+            clang cmake pkg-config dpkg-dev rpm desktop-file-utils file
+
+      - name: Install appimagetool
+        run: |
+          curl -fsSL -o /tmp/appimagetool \
+            https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-x86_64.AppImage
+          sudo install -m755 /tmp/appimagetool /usr/local/bin/appimagetool
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter build linux --release
+      - run: ./packaging/linux/build-packages.sh
+
+      # The .rpm must be installable on its target distribution, not merely
+      # well-formed; this is what caught the missing GL dependency.
+      - name: Verify the .rpm on Fedora
+        run: |
+          docker run --rm \
+            -v "$PWD/dist:/dist:ro" \
+            -v "$PWD/packaging/linux:/pkg:ro" \
+            fedora:41 bash /pkg/verify-rpm-fedora.sh
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-linux
+          path: dist/*
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Publish: gather every artifact, record the dependency tree, checksum it
+  # all, sign it, and attach the result to the release (ADR-0007).
+  # ---------------------------------------------------------------------------
+  publish:
+    name: Sign and publish
+    needs: [check-version, build, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # create the release
+      id-token: write   # Sigstore keyless signing via OIDC
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+
+      - run: flutter pub get
+
+      # ADR-0007: an air-gapped adopter cannot resolve this tree to see what
+      # they are running, so the release states it, with a hash per package.
+      - name: Generate the SBOM
+        run: |
+          set -euo pipefail
+          export SOURCE_DATE_EPOCH="$(git log -1 --pretty=%ct)"
+          dart run tool/generate_sbom.dart \
+            "dist/dula-authenticator-${{ needs.check-version.outputs.version }}-sbom.cdx.json"
+
+      - name: Checksum every artifact
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+
+      # Keyless Sigstore: the signing identity is this workflow, proven by a
+      # GitHub OIDC token, so there is no private key in the repository or in
+      # secrets to leak or rotate. Verification instructions are in
+      # docs/RELEASING.md.
+      - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+
+      - name: Sign SHA256SUMS
+        run: |
+          set -euo pipefail
+          cd dist
+          cosign sign-blob --yes \
+            --output-signature SHA256SUMS.sig \
+            --output-certificate SHA256SUMS.pem \
+            SHA256SUMS
+          echo "signed; the identity is this workflow, not a stored key"
+
+      - name: What will be published
+        run: ls -la dist
+
+      # gh is preinstalled on the runner, so the release is created without a
+      # third-party action — one less thing in the supply chain.
+      - name: Publish the release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          v="${{ needs.check-version.outputs.version }}"
+          notes="$(mktemp)"
+          {
+            echo "## Dula Authenticator ${v}"
+            echo
+            echo "No backend, no accounts, no telemetry. Codes are generated locally."
+            echo
+            echo "### Verifying this release"
+            echo
+            echo 'Every artifact is listed in `SHA256SUMS`, which is signed with Sigstore.'
+            echo 'There is no private signing key: the signature attests that these files'
+            echo "were produced by this repository's release workflow."
+            echo
+            echo '```bash'
+            echo 'sha256sum -c SHA256SUMS'
+            echo 'cosign verify-blob \'
+            echo '  --certificate SHA256SUMS.pem \'
+            echo '  --signature SHA256SUMS.sig \'
+            echo "  --certificate-identity-regexp '^https://github.com/${GITHUB_REPOSITORY}/' \\"
+            echo "  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \\"
+            echo '  SHA256SUMS'
+            echo '```'
+            echo
+            echo "See [docs/RELEASING.md](docs/RELEASING.md) for offline verification, and"
+            echo "the SBOM (\`*-sbom.cdx.json\`, CycloneDX) for the full dependency tree."
+            echo
+            echo "### Linux"
+            echo
+            echo 'The AppImage needs no installation — `chmod +x` and run it. The `.deb`'
+            echo 'and `.rpm` are for managed fleets. None of them are sandboxed; see'
+            echo '[SECURITY_MODEL.md](docs/SECURITY_MODEL.md).'
+            echo
+            echo "A Secret Service keyring (\`gnome-keyring\`, \`kwallet\`) must be installed"
+            echo "and unlocked, or the app will say so and refuse to start."
+          } > "${notes}"
+
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "Dula Authenticator ${v}" \
+            --notes-file "${notes}" \
+            --verify-tag \
+            dist/*
