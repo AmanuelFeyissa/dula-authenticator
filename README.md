@@ -249,7 +249,13 @@ flutter test integration_test/app_flow_test.dart -d windows    # or -d linux
 Every push and pull request runs the analyzer and unit suite on **Ubuntu and Windows**, builds all
 four shipping targets, and replays both Linux keyring scenarios plus the full end-to-end suite
 against a real `gnome-keyring` — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
-`flutter analyze` is a zero-tolerance gate, infos included.
+`flutter analyze` is a zero-tolerance gate, infos included, and `dart format` is enforced.
+
+> [!NOTE]
+> Run `dart format .` before committing. A couple of deliberately hand-grouped regions are marked
+> `// dart format off`. The tree was reformatted in one mechanical commit, listed in
+> [`.git-blame-ignore-revs`](.git-blame-ignore-revs) — run
+> `git config blame.ignoreRevsFile .git-blame-ignore-revs` once so `git blame` skips past it.
 
 ## Building
 

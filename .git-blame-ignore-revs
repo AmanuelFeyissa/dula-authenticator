@@ -1,0 +1,13 @@
+# Revisions that changed formatting only, and would otherwise bury the real
+# author of a line behind a mass reformat.
+#
+# GitHub honours this file automatically in its blame view. To get the same
+# locally, once per clone:
+#
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Only add a commit here if it is genuinely whitespace-only, so that `git
+# blame` keeps pointing at whoever last changed the code's meaning.
+
+# Format the entire tree with dart format (mechanical, no behaviour change)
+b16c81962c376e8722c393ed9a99549ffb45dd67
