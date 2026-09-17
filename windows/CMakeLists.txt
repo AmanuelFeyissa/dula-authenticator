@@ -32,6 +32,19 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
 
+# `local_auth_windows` compiles with MSVC's deprecated `/await` switch (both
+# 1.0.11 and the current 2.0.2 do), which forces the old
+# <experimental/coroutine> header even though the plugin already requests
+# cxx_std_20. MSVC 14.51 turned using that header into a hard error (STL1011),
+# so without this define the Windows build fails on any recent Visual Studio —
+# found by CI on a VS 2026 runner, not reproducible on older toolchains.
+#
+# This define is exactly what the compiler's own diagnostic prescribes, and it
+# is set here, before the plugin subdirectories are added below, so it reaches
+# them. Remove it once the plugin drops `/await` in favour of the C++20
+# <coroutine> header it is already compiling for.
+add_definitions(-D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+
 # Compilation settings that should be applied to most targets.
 #
 # Be cautious about adding new options here, as plugins use this function by
