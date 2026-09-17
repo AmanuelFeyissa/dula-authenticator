@@ -4,6 +4,7 @@
 
 **A cross-platform TOTP/HOTP authenticator that works where the others don't — air-gapped networks, camera-free offices, and desktops.**
 
+[![CI](https://github.com/AmanuelFeyissa/dula-authenticator/actions/workflows/ci.yml/badge.svg)](https://github.com/AmanuelFeyissa/dula-authenticator/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3.41-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Android%20%7C%20Web%20%7C%20Linux-informational)](#platform-status)
@@ -244,6 +245,11 @@ without the right credential.
 flutter test                                                   # unit + widget
 flutter test integration_test/app_flow_test.dart -d windows    # or -d linux
 ```
+
+Every push and pull request runs the analyzer and unit suite on **Ubuntu and Windows**, builds all
+four shipping targets, and replays both Linux keyring scenarios plus the full end-to-end suite
+against a real `gnome-keyring` — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+`flutter analyze` is a zero-tolerance gate, infos included.
 
 ## Building
 

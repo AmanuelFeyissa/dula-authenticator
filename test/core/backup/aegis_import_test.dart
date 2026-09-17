@@ -41,8 +41,8 @@ Map<String, dynamic> _entry({
         'secret': secret,
         'algo': algo,
         'digits': digits,
-        if (period != null) 'period': period,
-        if (counter != null) 'counter': counter,
+        'period': ?period,
+        'counter': ?counter,
       },
       'groups': [],
     };

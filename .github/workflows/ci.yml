@@ -1,0 +1,191 @@
+name: CI
+
+# Every push to main and every pull request. `workflow_dispatch` so a build can
+# be re-run by hand without an empty commit.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the same branch makes the older run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Pinned deliberately: the analyzer's lint set and the Dart null-aware
+  # element syntax used in the test fixtures both depend on the SDK version,
+  # so "latest stable" would make CI fail on a Flutter release rather than on
+  # a change to this repository.
+  FLUTTER_VERSION: 3.41.6
+
+jobs:
+  analyze-and-test:
+    name: Analyze + unit tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      # Zero tolerance: `flutter analyze` exits non-zero on infos too, and the
+      # repository is clean at that level. Deliberately no `dart format` gate —
+      # the existing source predates one, and reformatting it is a separate
+      # decision, not a side effect of adding CI.
+      - run: flutter analyze
+
+      - run: flutter test
+
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows
+            os: windows-latest
+          - target: web
+            os: ubuntu-latest
+          - target: linux
+            os: ubuntu-latest
+          - target: apk
+            os: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The Android Gradle build is pinned to Java 17 in
+      # android/app/build.gradle.kts; the runner's default JDK is not.
+      - if: matrix.target == 'apk'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - if: matrix.target == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgtk-3-dev libsecret-1-dev \
+            clang cmake pkg-config
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      # NOTE: the Android release build is currently signed with the debug key
+      # (android/app/build.gradle.kts). This job proves it compiles; producing
+      # a distributable, properly signed artifact is the release workflow's job
+      # (ADR-0007, signed releases).
+      - run: flutter build ${{ matrix.target }} --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dula-authenticator-${{ matrix.target }}
+          path: ${{ matrix.target == 'windows' && 'build/windows/x64/runner/Release'
+            || matrix.target == 'web' && 'build/web'
+            || matrix.target == 'linux' && 'build/linux/x64/release/bundle'
+            || 'build/app/outputs/flutter-apk/app-release.apk' }}
+          retention-days: 14
+
+  linux-keyring-gate:
+    name: Linux keyring gate (ADR-0018)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgtk-3-dev libsecret-1-dev \
+            clang cmake pkg-config xvfb dbus-x11 gnome-keyring
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Start a virtual display
+        run: |
+          Xvfb :99 -screen 0 1280x800x24 &
+          sleep 2
+          echo "DISPLAY=:99" >> "$GITHUB_ENV"
+
+      # Each step gets its own session bus, which matters: the first scenario
+      # leaves an activated daemon with no default collection on its bus, and
+      # the second needs a bus where the real keyring owns the name.
+      - name: No usable Secret Service - the gate must close
+        run: |
+          set -euo pipefail
+          eval "$(dbus-launch --sh-syntax)"
+          flutter test integration_test/linux_no_keyring_test.dart -d linux \
+            --dart-define=DULA_EXPECT_NO_KEYRING=true
+
+      - name: Unlocked keyring - the gate must open
+        run: |
+          set -euo pipefail
+          eval "$(dbus-launch --sh-syntax)"
+          # Throwaway passphrase for an ephemeral runner's keyring; it protects
+          # nothing and is not a credential. ONE daemon started with the
+          # passphrase, and its control socket exported before anything else
+          # runs: `--unlock --start` in one call yields a daemon with no
+          # default collection, and a separate `--start` without exporting
+          # GNOME_KEYRING_CONTROL first races a second daemon for the bus name.
+          # Both are the failure this ADR guards against (see its recipe).
+          eval $(echo -n 'ci-ephemeral-keyring' \
+            | gnome-keyring-daemon --unlock --components=secrets)
+          export GNOME_KEYRING_CONTROL
+          flutter test integration_test/linux_keyring_ok_test.dart -d linux \
+            --dart-define=DULA_EXPECT_KEYRING=true
+
+  linux-e2e:
+    name: Linux end-to-end suite
+    runs-on: ubuntu-latest
+    # Production Argon2id cost, so it is slow by design (ADR-0010).
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgtk-3-dev libsecret-1-dev \
+            clang cmake pkg-config xvfb dbus-x11 gnome-keyring
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Run the suite against a real keyring
+        run: |
+          set -euo pipefail
+          Xvfb :99 -screen 0 1280x800x24 &
+          sleep 2
+          export DISPLAY=:99
+          eval "$(dbus-launch --sh-syntax)"
+          eval $(echo -n 'ci-ephemeral-keyring' \
+            | gnome-keyring-daemon --unlock --components=secrets)
+          export GNOME_KEYRING_CONTROL
+          flutter test integration_test/app_flow_test.dart -d linux
