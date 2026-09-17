@@ -79,8 +79,18 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen>
     // from a post-frame callback — so without waiting, the check reads the
     // defaults (biometrics off), returns, and never fires again. That made
     // biometric unlock silently dead on a cold launch.
-    await ref.read(authStateProvider.notifier).ready;
-    await ref.read(settingsProvider.notifier).ready;
+    //
+    // Both notifiers are resolved *before* either await. Reading a provider
+    // between two awaits throws "Cannot use ref after the widget was
+    // disposed" whenever something replaces this screen while the first one
+    // is parked — which is exactly what the storage-unavailable screen does
+    // on a Linux box with no usable keyring (ADR-0018). Holding the notifiers
+    // removes the whole class of failure instead of adding one more `mounted`
+    // check between two lines.
+    final authNotifier = ref.read(authStateProvider.notifier);
+    final settingsNotifier = ref.read(settingsProvider.notifier);
+    await authNotifier.ready;
+    await settingsNotifier.ready;
     if (!mounted) return;
 
     final auth = ref.read(authStateProvider);
