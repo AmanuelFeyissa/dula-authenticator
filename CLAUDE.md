@@ -70,7 +70,7 @@ Current ADR index (see each file for full context/decision/consequences):
 | [0005](docs/adr/0005-device-integrity-scope.md) | Root/jailbreak + screenshot protection stay Android/iOS-only; documented, not silently assumed elsewhere |
 | [0006](docs/adr/0006-no-camera-enrollment-parity.md) | Manual entry is the universal enrollment path; camera button gated by real platform support |
 | [0007](docs/adr/0007-air-gapped-operability.md) | Zero telemetry by policy; documented offline build + SBOM + signed releases |
-| [0008](docs/adr/0008-linux-packaging.md) | AppImage + .deb + .rpm; Flatpak deferred; Snap out of scope permanently |
+| [0008](docs/adr/0008-linux-packaging.md) | AppImage + .deb + .rpm, built by `packaging/linux/build-packages.sh`; Flatpak deferred; Snap out of scope permanently |
 | [0009](docs/adr/0009-ai-contribution-workflow.md) | This file + the ADR practice + the security-review skill |
 | [0010](docs/adr/0010-vault-cryptography-modernization.md) | Argon2id + AES-256-GCM, versioned vault, auto-migrate on unlock |
 | [0011](docs/adr/0011-authentication-and-unlock-model.md) | Biometric-first unlock; PIN **or** passphrase fallback chosen at registration |

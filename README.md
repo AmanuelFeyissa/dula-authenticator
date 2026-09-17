@@ -275,6 +275,29 @@ flutter build ios      # macOS + Xcode only
 Linux also needs a running secret-service keyring (`gnome-keyring` or `kwallet`) at runtime — see
 [ADR-0004](docs/adr/0004-secure-storage-linux-keyring.md).
 
+### Linux packages
+
+```bash
+flutter build linux --release
+./packaging/linux/build-packages.sh            # all three, into dist/
+./packaging/linux/build-packages.sh deb        # or just one
+```
+
+| Format | Why it exists | Needs |
+|---|---|---|
+| **AppImage** | The air-gapped path: one file, no install step, no package manager, no network. Copy it onto a USB drive, `chmod +x`, run it | `appimagetool` |
+| **`.deb`** | Debian/Ubuntu fleets managed through an internal mirror | `dpkg-dev` |
+| **`.rpm`** | Fedora/RHEL-family fleets | `rpm` (`rpmbuild`) |
+
+Flatpak is a deferred stretch goal and Snap is permanently out of scope — the Snap Store backend is
+closed and cannot be self-hosted, which defeats the point for the adopters this targets
+([ADR-0008](docs/adr/0008-linux-packaging.md)).
+
+> [!WARNING]
+> None of the Linux packages are sandboxed. The AppImage in particular runs with the full
+> permissions of whoever launches it — it is not a Flatpak. See
+> [SECURITY_MODEL.md](docs/SECURITY_MODEL.md).
+
 ## Project layout
 
 ```

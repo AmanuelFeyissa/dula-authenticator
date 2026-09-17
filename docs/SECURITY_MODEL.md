@@ -159,6 +159,13 @@ Notes on the gaps:
 - **Web is the weakest deployment.** There is no OS keystore in a browser; stored data is protected
   only by the browser's origin isolation. Treat the web build as a convenience, not as a place to
   keep secrets that matter.
+- **The Linux packages are not sandboxed.** The AppImage runs with exactly the permissions of the
+  user who launched it, the same as any other native binary — it is *not* equivalent to a Flatpak
+  or a Snap in this respect, and nothing about the single-file format should be read as
+  containment ([ADR-0008](adr/0008-linux-packaging.md)). The `.deb` and `.rpm` packages are
+  likewise unsandboxed. This is a deliberate trade for the air-gapped case (no runtime, no store,
+  no network), not an oversight. A deployer who wants confinement should apply the mechanism their
+  distribution already uses — a systemd unit with `ProtectHome`, AppArmor, or SELinux.
 
 ## Cryptography
 

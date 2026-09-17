@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AppStream metadata, read by GNOME Software, KDE Discover and apt/dnf
+     front-ends. Validated with `appstreamcli validate` in CI. -->
+<component type="desktop-application">
+  <id>com.dulaauth.totp</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>Apache-2.0</project_license>
+
+  <name>Dula Authenticator</name>
+  <summary>Offline TOTP and HOTP authenticator</summary>
+  <developer id="com.dulaauth">
+    <name>Amanuel Feyissa Kussa</name>
+  </developer>
+
+  <description>
+    <p>
+      A cross-platform authenticator that generates TOTP (RFC 6238) and HOTP
+      (RFC 4226) codes entirely on the device. There is no backend, no account
+      and no telemetry: it makes no outbound network connection of any kind,
+      which makes it usable on air-gapped and restricted networks.
+    </p>
+    <p>
+      Secrets are sealed with AES-256-GCM under an Argon2id-derived key and
+      stored in the operating system's own credential store. On Linux that is
+      the Secret Service, so a keyring daemon must be installed and unlocked.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>TOTP, HOTP and Steam Guard codes</li>
+      <li>Unlock with a PIN or a passphrase, with optional biometrics</li>
+      <li>Add accounts by pasting a QR image, dragging one in, or typing the key</li>
+      <li>Import from Google Authenticator, Aegis and 2FAS</li>
+      <li>Encrypted local backup, protected by its own passphrase</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">com.dulaauth.totp.desktop</launchable>
+  <provides>
+    <binary>dula-authenticator</binary>
+  </provides>
+
+  <url type="homepage">https://github.com/AmanuelFeyissa/dula-authenticator</url>
+  <url type="bugtracker">https://github.com/AmanuelFeyissa/dula-authenticator/issues</url>
+  <url type="vcs-browser">https://github.com/AmanuelFeyissa/dula-authenticator</url>
+
+  <categories>
+    <category>Utility</category>
+    <category>Security</category>
+  </categories>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="1.0.0" date="2026-09-17">
+      <description>
+        <p>First packaged Linux release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

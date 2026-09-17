@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Dula Authenticator
+GenericName=Authenticator
+Comment=Generate TOTP and HOTP codes locally, with no account and no network
+Exec=dula-authenticator
+Icon=com.dulaauth.totp
+Terminal=false
+Categories=Utility;Security;
+Keywords=TOTP;HOTP;OTP;2FA;MFA;authenticator;two-factor;
+# Must match APPLICATION_ID in linux/CMakeLists.txt, which the runner passes to
+# g_set_prgname(); without it the window is not matched to this launcher entry.
+StartupWMClass=com.dulaauth.totp
+StartupNotify=true

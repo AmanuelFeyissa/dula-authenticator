@@ -7,7 +7,11 @@ project(runner LANGUAGES CXX)
 set(BINARY_NAME "dula_auth")
 # The unique GTK application identifier for this application. See:
 # https://wiki.gnome.org/HowDoI/ChooseApplicationID
-set(APPLICATION_ID "com.dulaauth.dula_auth")
+# Matches the Android applicationId and the name of the installed desktop
+# entry (packaging/linux/com.dulaauth.totp.desktop). The desktop file's
+# basename must equal this id, or GNOME/Wayland cannot associate the running
+# window with its launcher and falls back to a generic icon.
+set(APPLICATION_ID "com.dulaauth.totp")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.

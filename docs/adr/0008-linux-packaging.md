@@ -1,7 +1,35 @@
 # ADR-0008: Linux Packaging & Distribution Formats
 
 ## Status
-Proposed
+Accepted — implemented in `packaging/linux/`, built and verified in CI (`package-linux`).
+
+Implementation notes, where reality differed from the sketch above:
+
+- **`rpmbuild`, not `fpm`.** The Decision named `dpkg-deb`/`rpmbuild`, and both are single apt
+  packages already present on the CI image; `fpm` would have added a Ruby toolchain to build a
+  package from a binary that is already built.
+- **One staged tree feeds all three formats.** The Flutter bundle installs to
+  `/usr/lib/dula-authenticator/` as a unit, because the executable resolves its `data/` directory
+  and its bundled `lib/*.so` relative to its own location — a conventional split across
+  `/usr/bin` and `/usr/lib` breaks asset loading. `/usr/bin/dula-authenticator` is a relative
+  symlink into it.
+- **The keyring dependency is expressed in package metadata.** `Recommends: gnome-keyring |
+  kwalletmanager | keepassxc` on the `.deb` and `Recommends: gnome-keyring` on the `.rpm`, not
+  `Depends`/`Requires`: several implementations satisfy ADR-0004, and with none present the app
+  now fails with a clear blocking message rather than hanging (ADR-0018), so an absent keyring
+  should not make the package itself uninstallable.
+- **`Depends` carries alternatives for the `t64` transition** (`libgtk-3-0 | libgtk-3-0t64`).
+  Naming only the pre-transition packages would make the `.deb` uninstallable on Ubuntu 24.04+.
+- **The Linux `APPLICATION_ID` was changed** from the generated `com.dulaauth.dula_auth` to
+  `com.dulaauth.totp`, matching the Android `applicationId` and the installed desktop entry's
+  basename. GNOME and Wayland match a window to its launcher by that id, so a mismatch shows a
+  generic icon instead of the app's own.
+- **Beyond the ADR's scope, deliberately:** an AppStream `metainfo.xml` so the packages present
+  properly in GNOME Software and KDE Discover, and CI validation of both it and the desktop entry
+  (`appstreamcli validate`, `desktop-file-validate`). Neither was required, but a Linux desktop
+  package without them is visibly half-finished.
+- **CI smoke-tests the AppImage** by launching it under Xvfb with a real keyring and asserting the
+  process stays up, so a package that builds but cannot start fails the build.
 
 ## Context
 The project needs a real Linux distribution story, not just a Linux *build* — a build artifact
